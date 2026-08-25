@@ -1,0 +1,32 @@
+{
+  "name": "yi-desktop",
+  "version": "0.1.0",
+  "description": "八字排盘与六爻起卦学习桌面程序",
+  "main": "./out/main/index.js",
+  "author": "yi-desktop",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "web": "vite --config vite.web.config.ts",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@types/node": "^22.10.2",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "electron": "^33.2.1",
+    "electron-vite": "^2.3.0",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8",
+    "vue-tsc": "^2.1.10"
+  }
+}
