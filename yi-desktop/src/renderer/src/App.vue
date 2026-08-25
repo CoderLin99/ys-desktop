@@ -9,6 +9,7 @@ const route = useRoute()
 /** 主导航项 */
 const nav = [
   { to: '/', label: '首页', match: 'home' },
+  { to: '/trend', label: '走势', match: 'trend' },
   { to: '/bazi', label: '八字', match: 'bazi' },
   { to: '/liuyao', label: '六爻', match: 'liuyao' },
   { to: '/rules', label: '规则', match: 'rules' }

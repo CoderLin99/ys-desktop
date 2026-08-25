@@ -9,11 +9,11 @@
     <p class="eyebrow">YI DESKTOP</p>
     <h1>易学桌面</h1>
     <p class="lead">
-      把八字十神与六爻起卦里「可编码的规则」收成程序：先排盘、再对照，少跟影子打架。
+      用八字推中长期大运流年，用六爻看近段事态顺逆——先看大概走势，再决定怎么动。
     </p>
     <div class="cta">
-      <router-link class="btn primary" to="/bazi">排八字</router-link>
-      <router-link class="btn ghost" to="/liuyao">起六爻</router-link>
+      <router-link class="btn primary" to="/trend">推演走势</router-link>
+      <router-link class="btn ghost" to="/bazi">排八字</router-link>
     </div>
     <div class="hero-visual" aria-hidden="true">
       <div class="orb" />

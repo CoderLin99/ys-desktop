@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { shishenOf } from './bazi/shishen'
 import { buildBaZi, dayPillarIndex, hourGanFromDay, toJulianDay } from './bazi/chart'
+import { analyzeBaZiTrend, buildDaYun, judgeStrength } from './bazi/trend'
 import { castLiuYao, liuqinOf, bitsToGua } from './liuyao/cast'
+import { analyzeLiuYaoTrend } from './liuyao/trend'
 
 describe('十神', () => {
   it('甲日见乙为劫财，见丙为食神', () => {
@@ -32,6 +34,24 @@ describe('八字排盘', () => {
   })
 })
 
+describe('八字走势', () => {
+  it('能给出强弱、大运与流年曲线', () => {
+    const chart = buildBaZi(1990, 5, 20, 14, 0)
+    const strength = judgeStrength(chart)
+    expect(['偏弱', '中和', '偏强']).toContain(strength.level)
+
+    const dun = buildDaYun(chart, 'male', 8)
+    expect(dun).toHaveLength(8)
+    expect(dun[0]).toHaveLength(2)
+
+    const trend = analyzeBaZiTrend(chart, { gender: 'male', fromYear: 2024, yearSpan: 12 })
+    expect(trend.years).toHaveLength(12)
+    expect(trend.useful.length).toBeGreaterThan(0)
+    expect(trend.years[0].score).toBeGreaterThanOrEqual(8)
+    expect(trend.years[0].aspects.career).toBeTruthy()
+  })
+})
+
 describe('六爻', () => {
   it('比特识别乾坤', () => {
     expect(bitsToGua(0b111)).toBe('乾')
@@ -47,10 +67,17 @@ describe('六爻', () => {
   })
 
   it('指定爻值起卦，天水讼触发影子提示', () => {
-    // 下坎 010，上乾 111 → 初阴、二阳、三阴、四阳、五阳、上阳 → 8,7,8,7,7,7
     const r = castLiuYao({ values: [8, 7, 8, 7, 7, 7], dayGan: '甲' })
     expect(r.lower).toBe('坎')
     expect(r.upper).toBe('乾')
     expect(r.shadowFight).toBe(true)
+  })
+
+  it('六爻走势能输出近段评分', () => {
+    const r = castLiuYao({ values: [8, 7, 8, 7, 7, 7], dayGan: '甲' })
+    const t = analyzeLiuYaoTrend(r, 'career')
+    expect(t.score).toBeGreaterThanOrEqual(10)
+    expect(t.headline).toContain('事业')
+    expect(t.shadowLike).toBe(true)
   })
 })
