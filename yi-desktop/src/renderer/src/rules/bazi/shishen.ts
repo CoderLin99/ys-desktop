@@ -1,7 +1,9 @@
 /**
- * 十神规则：以日干为日主，判其他天干相对关系。
+ * 十神规则：以日干为日主，判其他天干相对关系；须可复盘。
  */
 import { KE, SHENG, TIANGAN_WUXING, TIANGAN_YANG, type TianGan } from '../constants'
+import { makeEvidence, type RuleEvidence } from './evidence'
+import { getMetricGloss, getShiShenBrief, tableVersionNote } from './tables/load'
 
 export type ShiShen =
   | '比肩'
@@ -15,18 +17,18 @@ export type ShiShen =
   | '偏印'
   | '正印'
 
-/** 十神教学释义（倾向描述，非定论） */
+/** 十神教学释义（来自 tables/shishen-brief.json） */
 export const SHISHEN_BRIEF: Record<ShiShen, string> = {
-  比肩: '同辈自立、分担与竞争；看别人时多「同类对照」。',
-  劫财: '争夺、分财、行动力；易与人抢同一资源。',
-  食神: '表达、享受、才艺；输出顺畅。',
-  伤官: '挑剔、革新、口才；不服约束。',
-  偏财: '偏业、浮动财、机会财；眼光活。',
-  正财: '正当收入、务实、节制；稳定求财。',
-  七杀: '压力、挑战、果决；对敌对力量敏感。',
-  正官: '规则、职位、责任；社会评价与约束。',
-  偏印: '偏门学问、灵感；非常规信息通道。',
-  正印: '学习、贵人、庇护；吸收他人知识。'
+  比肩: getShiShenBrief('比肩'),
+  劫财: getShiShenBrief('劫财'),
+  食神: getShiShenBrief('食神'),
+  伤官: getShiShenBrief('伤官'),
+  偏财: getShiShenBrief('偏财'),
+  正财: getShiShenBrief('正财'),
+  七杀: getShiShenBrief('七杀'),
+  正官: getShiShenBrief('正官'),
+  偏印: getShiShenBrief('偏印'),
+  正印: getShiShenBrief('正印')
 }
 
 /**
@@ -35,13 +37,54 @@ export const SHISHEN_BRIEF: Record<ShiShen, string> = {
  * @param other 待判天干
  */
 export function shishenOf(dayGan: TianGan, other: TianGan): ShiShen {
+  return explainShiShen(dayGan, other).name
+}
+
+/**
+ * 十神判定 + 可复盘依据。
+ * @param dayGan 日干
+ * @param other 待判天干
+ */
+export function explainShiShen(
+  dayGan: TianGan,
+  other: TianGan
+): { name: ShiShen; evidence: RuleEvidence } {
   const me = TIANGAN_WUXING[dayGan]
   const ox = TIANGAN_WUXING[other]
   const same = TIANGAN_YANG[dayGan] === TIANGAN_YANG[other]
+  const polarity = same ? '同性' : '异性'
 
-  if (ox === me) return same ? '比肩' : '劫财'
-  if (SHENG[me] === ox) return same ? '食神' : '伤官'
-  if (KE[me] === ox) return same ? '偏财' : '正财'
-  if (KE[ox] === me) return same ? '七杀' : '正官'
-  return same ? '偏印' : '正印'
+  let name: ShiShen
+  let how: string
+  if (ox === me) {
+    name = same ? '比肩' : '劫财'
+    how = `同五行${me}且${polarity}`
+  } else if (SHENG[me] === ox) {
+    name = same ? '食神' : '伤官'
+    how = `日主${me}生对方${ox}且${polarity}`
+  } else if (KE[me] === ox) {
+    name = same ? '偏财' : '正财'
+    how = `日主${me}克对方${ox}且${polarity}`
+  } else if (KE[ox] === me) {
+    name = same ? '七杀' : '正官'
+    how = `对方${ox}克日主${me}且${polarity}`
+  } else {
+    name = same ? '偏印' : '正印'
+    how = `对方${ox}生日主${me}且${polarity}`
+  }
+
+  const evidence = makeEvidence({
+    id: `shishen.${dayGan}.${other}`,
+    value: name,
+    rule: `十神生克阴阳表（${tableVersionNote()}）`,
+    basis: `日干${dayGan}（${me}）对${other}（${ox}）：${how}→${name}`,
+    steps: [
+      `日干${dayGan}=${me}`,
+      `${other}=${ox}`,
+      how,
+      `结论${name}`
+    ],
+    gloss: getMetricGloss(name) || getShiShenBrief(name)
+  })
+  return { name, evidence }
 }

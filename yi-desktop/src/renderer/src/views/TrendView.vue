@@ -2,14 +2,28 @@
 /**
  * 走势推演页：八字看中长期大运流年，六爻看近段事态。
  */
-import { computed, ref, watch } from 'vue'
+import { computed, onActivated, onMounted, ref, watch } from 'vue'
+import SelectButton from 'primevue/selectbutton'
 import { buildBaZi } from '@rules/bazi/chart'
 import { analyzeBaZiTrend, type BaZiTrend } from '@rules/bazi/trend'
 import { castLiuYao, type LiuYaoResult } from '@rules/liuyao/cast'
 import { analyzeLiuYaoTrend, type LiuYaoTrend, type TrendTopic } from '@rules/liuyao/trend'
 import { TIANGAN } from '@rules/constants'
+import { useAssistContextStore } from '../stores/assistContext'
+
+const assist = useAssistContextStore()
 
 const tab = ref<'bazi' | 'liuyao'>('bazi')
+/** 走势页顶部分页 */
+const tabOptions = [
+  { label: '八字走势', value: 'bazi' },
+  { label: '六爻走势', value: 'liuyao' }
+]
+/** 性别选项 */
+const genderOptions = [
+  { label: '男', value: 'male' },
+  { label: '女', value: 'female' }
+]
 
 /** —— 八字输入 —— */
 const gender = ref<'male' | 'female'>('male')
@@ -17,9 +31,42 @@ const year = ref(1990)
 const month = ref(5)
 const day = ref(20)
 const hour = ref(14)
+/** 时辰未知时排三柱再推走势 */
+const hourUnknown = ref(false)
 const fromYear = ref(new Date().getFullYear())
 const baziError = ref('')
 const baziTrend = ref<BaZiTrend | null>(null)
+
+/**
+ * 发布走势摘要（八字或六爻，以当前有结果的为准）。
+ */
+function publishTrend(): void {
+  const parts: string[] = []
+  if (baziTrend.value) {
+    const t = baziTrend.value
+    parts.push(
+      `【八字走势】强弱 ${t.strength} · 喜用 ${t.useful.join('、')} · 忌 ${t.avoid.join('、')}`,
+      t.patternSummary,
+      t.lifeArc,
+      ...t.dayun.slice(0, 4).map((d) => d.summary),
+      ...t.years.slice(0, 5).map((y) => y.summary)
+    )
+  }
+  if (liuTrend.value && gua.value) {
+    const lt = liuTrend.value
+    parts.push(
+      `【六爻走势】${gua.value.benGuaName}→${gua.value.bianGuaName} · ${lt.headline}（${lt.score}/${lt.band}）`,
+      ...lt.points.slice(0, 6),
+      lt.advice
+    )
+  }
+  if (!parts.length) return
+  assist.publish({
+    id: 'trend',
+    title: '走势',
+    factsText: parts.join('\n')
+  })
+}
 
 /**
  * 推演八字走势。
@@ -27,12 +74,19 @@ const baziTrend = ref<BaZiTrend | null>(null)
 function runBaZi(): void {
   baziError.value = ''
   try {
-    const chart = buildBaZi(year.value, month.value, day.value, hour.value, 0)
+    const chart = buildBaZi(
+      year.value,
+      month.value,
+      day.value,
+      hourUnknown.value ? null : hour.value,
+      0
+    )
     baziTrend.value = analyzeBaZiTrend(chart, {
       gender: gender.value,
       fromYear: fromYear.value,
       yearSpan: 12
     })
+    publishTrend()
   } catch (e) {
     baziTrend.value = null
     baziError.value = e instanceof Error ? e.message : String(e)
@@ -68,11 +122,23 @@ async function runLiuYao(): Promise<void> {
   gua.value = castLiuYao({ dayGan: dayGan.value })
   liuTrend.value = analyzeLiuYaoTrend(gua.value, topic.value)
   rolling.value = false
+  publishTrend()
 }
 
 /** 主题变更时，若已有卦则重算解读 */
 watch(topic, () => {
-  if (gua.value) liuTrend.value = analyzeLiuYaoTrend(gua.value, topic.value)
+  if (gua.value) {
+    liuTrend.value = analyzeLiuYaoTrend(gua.value, topic.value)
+    publishTrend()
+  }
+})
+
+onMounted(() => {
+  assist.setActiveFeature('trend')
+})
+
+onActivated(() => {
+  assist.setActiveFeature('trend')
 })
 
 runBaZi()
@@ -87,25 +153,41 @@ runBaZi()
       </p>
     </header>
 
-    <div class="tabs">
-      <button type="button" :class="{ on: tab === 'bazi' }" @click="tab = 'bazi'">八字走势</button>
-      <button type="button" :class="{ on: tab === 'liuyao' }" @click="tab = 'liuyao'">六爻走势</button>
-    </div>
+    <SelectButton
+      v-model="tab"
+      class="pv-seg"
+      :options="tabOptions"
+      optionLabel="label"
+      optionValue="value"
+      :allowEmpty="false"
+      aria-label="走势类型"
+    />
 
     <!-- 八字 -->
     <section v-show="tab === 'bazi'" class="panel">
       <form class="form" @submit.prevent="runBaZi">
-        <label>
-          性别
-          <select v-model="gender">
-            <option value="male">男</option>
-            <option value="female">女</option>
-          </select>
-        </label>
+        <div class="pv-field">
+          <span class="field-label">性别</span>
+          <SelectButton
+            v-model="gender"
+            :options="genderOptions"
+            optionLabel="label"
+            optionValue="value"
+            :allowEmpty="false"
+            aria-label="性别"
+          />
+        </div>
         <label>年 <input v-model.number="year" type="number" min="1900" max="2100" /></label>
         <label>月 <input v-model.number="month" type="number" min="1" max="12" /></label>
         <label>日 <input v-model.number="day" type="number" min="1" max="31" /></label>
-        <label>时 <input v-model.number="hour" type="number" min="0" max="23" /></label>
+        <label>
+          时
+          <input v-model.number="hour" type="number" min="0" max="23" :disabled="hourUnknown" />
+        </label>
+        <label class="check">
+          <input v-model="hourUnknown" type="checkbox" />
+          时辰未知
+        </label>
         <label>流年起 <input v-model.number="fromYear" type="number" min="1950" max="2100" /></label>
         <button class="submit" type="submit">推演走势</button>
       </form>
@@ -119,14 +201,18 @@ runBaZi()
           <strong>{{ baziTrend.useful.join('、') }}</strong>
           · 慎
           {{ baziTrend.avoid.join('、') }}
+          <template v-if="baziTrend.cong.kind !== '不从'"
+            >· 从格 <strong>{{ baziTrend.cong.kind }}{{ baziTrend.cong.follow ? '·' + baziTrend.cong.follow : '' }}</strong></template
+          >
         </p>
+        <p class="soft">{{ baziTrend.strengthBreakdown.text }}</p>
         <p>{{ baziTrend.patternSummary }}</p>
         <p>{{ baziTrend.lifeArc }}</p>
 
         <h2>大运倾向</h2>
         <div class="dayun">
           <article v-for="d in baziTrend.dayun" :key="d.index" class="dayun-item">
-            <span class="idx">第{{ d.index }}运</span>
+            <span class="idx">{{ d.ageFrom }}–{{ d.ageTo }}岁</span>
             <strong>{{ d.gz }}</strong>
             <span class="score">{{ d.score }}</span>
             <p>{{ d.summary }}</p>
@@ -210,28 +296,14 @@ runBaZi()
   line-height: 1.65;
   max-width: 42em;
 }
-.tabs {
-  display: flex;
-  gap: 8px;
+.pv-seg {
   margin: 20px 0 12px;
-}
-.tabs button {
-  border: 1px solid var(--line);
-  background: transparent;
-  padding: 8px 16px;
-  border-radius: 999px;
-  color: var(--ink-soft);
-}
-.tabs button.on {
-  background: var(--teal);
-  border-color: var(--teal);
-  color: #f4fffb;
 }
 .panel {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--surface);
 }
 .form {
   display: flex;
@@ -239,27 +311,57 @@ runBaZi()
   gap: 10px;
   align-items: end;
 }
-label {
+.form > label {
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 0.8rem;
   color: var(--ink-soft);
 }
-input,
-select {
+.pv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.field-label {
+  line-height: 1.2;
+}
+label.check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.form input,
+.form select {
+  width: 88px;
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.88);
-  min-width: 72px;
+  background: var(--input-bg);
+}
+.form select {
+  width: auto;
+  min-width: 88px;
+}
+.form input[type='checkbox'] {
+  width: auto;
 }
 .submit {
   padding: 10px 18px;
   border: none;
   border-radius: 999px;
   background: var(--ink);
-  color: #f3f7f4;
+  color: var(--on-accent);
+}
+.submit:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 .err {
   color: var(--seal);
@@ -276,6 +378,11 @@ select {
 .lead-line {
   line-height: 1.7;
 }
+.soft {
+  color: var(--ink-soft);
+  line-height: 1.65;
+  font-size: 0.92rem;
+}
 .dayun {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -283,7 +390,7 @@ select {
 }
 .dayun-item {
   padding: 12px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--surface-strong);
   border-top: 3px solid var(--teal);
 }
 .dayun-item .idx {
@@ -338,7 +445,7 @@ select {
   background: var(--gold);
 }
 .bar.低 {
-  background: #6a7f76;
+  background: var(--muted);
 }
 .yr,
 .sc {

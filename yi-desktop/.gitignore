@@ -1,7 +1,23 @@
 node_modules/
+vendor/
 out/
 dist/
+release/
+release-out/
 .DS_Store
 *.log
 .vscode/
 .idea/
+src-tauri/target/
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/app/.cxx/
+# 打包生成的前端资源与 so，勿入库（打 APK 时会再复制）
+src-tauri/gen/android/app/src/main/assets/
+src-tauri/gen/android/app/src/main/jniLibs/
+src-tauri/gen/android/keystore.properties
+*.apk
+*.aab
+*.ipa
+*.jks
+*.keystore

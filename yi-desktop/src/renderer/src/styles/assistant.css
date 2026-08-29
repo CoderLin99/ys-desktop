@@ -1,0 +1,479 @@
+/**
+ * 命师助手统一外观：对齐八字页悬浮窗（66vw×70vh、可拖、本盘追问区）。
+ */
+
+.ai-fab {
+  position: fixed;
+  right: 18px;
+  left: auto;
+  bottom: calc(
+    var(--dock-back-top-bottom) + var(--dock-back-top-height) + var(--dock-fab-gap) +
+      env(safe-area-inset-bottom, 0px)
+  );
+  z-index: 55;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 20px;
+  overflow: visible;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.ai-fab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ai-fab:not(:disabled):hover {
+  transform: translateY(-3px);
+}
+
+.ai-fab.open {
+  display: none;
+}
+
+.ai-assist-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 56;
+  pointer-events: none;
+  background: rgba(20, 35, 28, 0.08);
+}
+
+html[data-theme='dark'] .ai-assist-mask {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.ai-assist {
+  position: fixed;
+  right: 20px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  top: auto;
+  left: auto;
+  z-index: 57;
+  display: flex;
+  flex-direction: column;
+  width: 66vw;
+  height: 70vh;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-solid);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.ai-assist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-strong);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.ai-assist.dragging .ai-assist-head {
+  cursor: grabbing;
+}
+
+.ai-assist-titles {
+  min-width: 0;
+  flex: 1;
+}
+
+.ai-assist-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--teal);
+}
+
+.ai-assist-head p {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.ai-assist-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.ai-assist-head .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.ai-assist-head .icon-btn:hover {
+  background: rgba(20, 35, 28, 0.08);
+  color: var(--ink);
+}
+
+.ai-assist-body {
+  flex: 1;
+  min-height: 0;
+  padding: 14px 18px 20px;
+  overflow: auto;
+}
+
+.ai-assist-banner {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(181, 64, 42, 0.08);
+  color: var(--seal);
+  font-size: 0.88rem;
+}
+
+.ai-assist-banner a,
+.ai-assist-meta a {
+  color: var(--teal);
+  text-decoration: underline;
+}
+
+.ai-assist-meta {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.ai-assist .soft {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.ai-assist .chip {
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.ai-assist .chip.on {
+  border-color: var(--teal);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--teal) 14%, var(--surface-strong));
+}
+
+.ai-assist .chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* 本页材料条：轻量胶囊，不抢追问区 */
+.ai-assist .ctx-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.ai-assist .ctx-bar .tag {
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--on-accent);
+  background: var(--teal);
+}
+
+.ai-assist .ctx-bar .ctx-main {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+}
+
+.ai-assist .ctx-bar .ctx-main small {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+
+.ai-assist .ctx-extra {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--line);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+.ai-assist .ctx-extra > .soft {
+  margin-bottom: 8px;
+}
+
+.ai-assist .ctx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ai-assist .ctx-chips .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 对齐八字「本盘追问」区块 */
+.ai-assist .consult {
+  margin-top: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.ai-assist .consult h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.ai-assist .consult-agents {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+.ai-assist .consult-agents .p-selectbutton {
+  flex-wrap: wrap;
+}
+
+.ai-assist .consult-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: min(42vh, 480px);
+  overflow: auto;
+}
+
+.ai-assist .consult-log li {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.ai-assist .consult-log .who {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  color: var(--teal);
+  padding-top: 2px;
+}
+
+.ai-assist .consult-log p,
+.ai-assist .consult-log .md-body {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.65;
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-assist .consult-log .thinking .who {
+  color: var(--muted);
+}
+
+.ai-assist .consult-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.ai-assist .think-box {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--teal) 28%, var(--line));
+  background: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    color-mix(in srgb, var(--teal) 10%, transparent) 45%,
+    rgba(255, 255, 255, 0.55) 90%
+  );
+  background-size: 200% 100%;
+  animation: assist-think-shimmer 1.6s ease-in-out infinite;
+}
+
+html[data-theme='dark'] .ai-assist .think-box {
+  background: linear-gradient(
+    110deg,
+    rgba(22, 34, 29, 0.7) 0%,
+    color-mix(in srgb, var(--teal) 16%, transparent) 45%,
+    rgba(22, 34, 29, 0.7) 90%
+  );
+  background-size: 200% 100%;
+}
+
+.ai-assist .think-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-assist .think-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.ai-assist .think-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  opacity: 0.35;
+  animation: assist-think-dot 1.2s ease-in-out infinite;
+}
+
+.ai-assist .think-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ai-assist .think-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.ai-assist .think-label {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.ai-assist .think-hint {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+}
+
+@keyframes assist-think-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes assist-think-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.ai-assist .consult-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: stretch;
+}
+
+.ai-assist .consult-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.ai-assist .consult-form .submit {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--teal);
+  color: var(--on-accent);
+  cursor: pointer;
+  font-size: 0.92rem;
+  min-height: 40px;
+}
+
+.ai-assist .consult-form .submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ai-assist .md-body :deep(strong) {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .ai-fab {
+    right: max(12px, env(safe-area-inset-right, 0px));
+    left: auto;
+    bottom: calc(var(--fab-stack-bottom) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ai-assist {
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: min(78dvh, 640px) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 48px) !important;
+    border-radius: 16px 16px 0 0;
+    transform: none !important;
+  }
+
+  .ai-assist-head {
+    cursor: default;
+    touch-action: auto;
+  }
+
+  .ai-assist-body {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .ai-assist .consult-log {
+    max-height: min(36dvh, 320px);
+  }
+}

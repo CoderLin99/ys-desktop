@@ -2,13 +2,36 @@
 /**
  * 六爻起卦页：铜钱模拟 + 装卦展示 + 影子打架提示。
  */
-import { ref } from 'vue'
+import { onActivated, onMounted, ref } from 'vue'
 import { castLiuYao, type LiuYaoResult, type YaoValue } from '@rules/liuyao/cast'
 import { TIANGAN } from '@rules/constants'
+import { useAssistContextStore } from '../stores/assistContext'
 
+const assist = useAssistContextStore()
 const dayGan = ref('甲')
 const result = ref<LiuYaoResult | null>(null)
 const rolling = ref(false)
+
+/**
+ * 发布六爻结果摘要到助手。
+ * @param r 起卦结果
+ */
+function publishLiuYao(r: LiuYaoResult): void {
+  const lines = [
+    `本卦 ${r.benGuaName} · 变卦 ${r.bianGuaName} · 下${r.lower}上${r.upper}`,
+    r.shadowFight ? '提示：跟影子打架' : '',
+    ...r.hints,
+    ...r.lines.map(
+      (line) =>
+        `${line.position}爻 ${line.liuqin}${line.naJiaZhi}${line.liushen}${line.isShi ? '世' : ''}${line.isYing ? '应' : ''}${line.moving ? '动' : ''}`
+    )
+  ]
+  assist.publish({
+    id: 'liuyao',
+    title: '六爻',
+    factsText: lines.filter(Boolean).join('\n')
+  })
+}
 
 /**
  * 动画间隔后起卦，增强「摇卦」感。
@@ -19,6 +42,7 @@ async function cast(): Promise<void> {
   await new Promise((r) => setTimeout(r, 420))
   result.value = castLiuYao({ dayGan: dayGan.value })
   rolling.value = false
+  publishLiuYao(result.value)
 }
 
 /**
@@ -27,6 +51,7 @@ async function cast(): Promise<void> {
 function demoSong(): void {
   const values = [8, 7, 8, 7, 7, 7] as YaoValue[]
   result.value = castLiuYao({ dayGan: dayGan.value, values })
+  publishLiuYao(result.value)
 }
 
 /**
@@ -38,6 +63,14 @@ function yaoGlyph(yang: boolean, moving: boolean): string {
   if (yang) return moving ? '━━━━○' : '━━━━━'
   return moving ? '━━ ━━×' : '━━ ━━━'
 }
+
+onMounted(() => {
+  assist.setActiveFeature('liuyao')
+})
+
+onActivated(() => {
+  assist.setActiveFeature('liuyao')
+})
 </script>
 
 <template>
@@ -114,7 +147,7 @@ function yaoGlyph(yang: boolean, moving: boolean): string {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--surface);
 }
 label {
   display: flex;
@@ -127,7 +160,7 @@ select {
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--input-bg);
 }
 button {
   padding: 10px 18px;
@@ -136,7 +169,7 @@ button {
 }
 button.primary {
   background: var(--ink);
-  color: #f3f7f4;
+  color: var(--on-accent);
   border-color: var(--ink);
 }
 button.ghost {
@@ -181,7 +214,7 @@ button:disabled {
   align-items: center;
   padding: 8px 10px;
   border-left: 3px solid transparent;
-  background: rgba(255, 255, 255, 0.42);
+  background: var(--surface);
   transition: transform 0.25s ease, border-color 0.25s ease;
 }
 .yao.shi {

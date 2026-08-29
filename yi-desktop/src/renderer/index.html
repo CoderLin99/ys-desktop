@@ -4,16 +4,18 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:"
+      content="default-src 'self' ipc: http://ipc.localhost; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' ipc: http://ipc.localhost https://api.deepseek.com https://api.siliconflow.cn http://127.0.0.1:* http://localhost:*"
     />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover：刘海/手势条；限制缩放避免 Android 输入框顶飞布局 -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#e7eee8" />
     <title>易学桌面 · 八字与六爻</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Outfit:wght@400;600&family=ZCOOL+XiaoWei&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="icon" type="image/png" href="./src/assets/app-icon.png" />
+    <link rel="apple-touch-icon" href="./src/assets/app-icon.png" />
   </head>
   <body>
     <div id="app"></div>

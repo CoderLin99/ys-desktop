@@ -1,5 +1,6 @@
 /**
  * 全局视觉：墨青纸感 + 印泥色点缀（避开紫白渐变与奶油陶土俗套）。
+ * 含 App/窄屏触控与安全区适配。
  */
 :root {
   --ink: #14231c;
@@ -11,9 +12,357 @@
   --gold: #a6843a;
   --line: rgba(20, 35, 28, 0.14);
   --shadow: 0 18px 50px rgba(20, 35, 28, 0.12);
-  --font-brand: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
-  --font-display: 'Noto Serif SC', serif;
-  --font-ui: 'Outfit', 'Noto Serif SC', sans-serif;
+  --muted: #6f7f76;
+  --surface: rgba(255, 255, 255, 0.45);
+  --surface-strong: rgba(255, 255, 255, 0.72);
+  --surface-solid: rgba(247, 250, 248, 0.98);
+  --input-bg: rgba(255, 255, 255, 0.85);
+  --chip-on: #f4fffb;
+  /* 深底上的按钮字色（随主题：日间浅字 / 暗夜深字配亮色按钮） */
+  --on-accent: #f3f7f4;
+  /* 始终浅色字：用于书脊等固定深色装饰底 */
+  --on-deep: #f3f7f4;
+  /* 表格斑马纹 / 危险提示底 */
+  --stripe: rgba(20, 35, 28, 0.04);
+  --danger-soft: rgba(181, 64, 42, 0.12);
+  /* 五行语义色（墨彩，避免 Material 蓝绿） */
+  --wx-wood: #1f6b45;
+  --wx-fire: #b5402a;
+  --wx-earth: #9a7a28;
+  --wx-metal: #8a7340;
+  --wx-water: #2a5a78;
+  --wx-wood-soft: rgba(31, 107, 69, 0.14);
+  --wx-fire-soft: rgba(181, 64, 42, 0.14);
+  --wx-earth-soft: rgba(154, 122, 40, 0.14);
+  --wx-metal-soft: rgba(138, 115, 64, 0.14);
+  --wx-water-soft: rgba(42, 90, 120, 0.14);
+  /* 指标芯片：强弱 / 喜忌 / 从格 / 起运 */
+  --metric-strong: #1f6f5b;
+  --metric-weak: #8a4a2a;
+  --metric-mid: #6a7a52;
+  --metric-xi: #1f6f5b;
+  --metric-ji: #b5402a;
+  --metric-cong: #a6843a;
+  --metric-yun: #3d6a8a;
+  /* 运势档位 */
+  --band-high: #1f6f5b;
+  --band-mid: #a6843a;
+  --band-low: #b5402a;
+  /* 紫微/风水等页的强调色（命宫、主按钮） */
+  --accent: #8b5a2b;
+  --font-brand: 'STKaiti', 'KaiTi', 'Songti SC', 'Noto Serif SC', serif;
+  --font-display: 'Songti SC', 'Noto Serif SC', 'STSong', serif;
+  --font-ui: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  /* 右下角「回顶部」与命师助手竖向堆叠（助手在其上） */
+  --dock-back-top-bottom: 28px;
+  --dock-back-top-height: 44px;
+  --dock-fab-gap: 12px;
+  /* 手机底部 Tab 高度（桌面为 0，窄屏媒体查询覆盖） */
+  --tab-bar-height: 0px;
+  /* 命师 FAB 底边：回顶之上 */
+  --fab-stack-bottom: calc(
+    var(--dock-back-top-bottom) + var(--dock-back-top-height) + var(--dock-fab-gap)
+  );
+  /* 主区为 FAB/手势条预留 */
+  --page-pad-bottom: 48px;
+  --touch-min: 44px;
+}
+
+/* 暗夜：提高正文/次要字对比度，避免灰字贴灰底 */
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --ink: #f0f7f3;
+  --ink-soft: #c8d9d0;
+  --paper: #121c18;
+  --paper-deep: #0a100e;
+  --seal: #f07860;
+  --teal: #6fd4ba;
+  --gold: #e0c07a;
+  --line: rgba(240, 247, 243, 0.22);
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  --muted: #a8bdb2;
+  --surface: rgba(28, 42, 36, 0.82);
+  --surface-strong: rgba(34, 50, 43, 0.94);
+  --surface-solid: #1a2621;
+  --input-bg: #0e1613;
+  --chip-on: #15201b;
+  --on-accent: #0e1613;
+  --stripe: rgba(240, 247, 243, 0.05);
+  --danger-soft: rgba(240, 120, 96, 0.18);
+  --wx-wood: #6ecf9a;
+  --wx-fire: #f07860;
+  --wx-earth: #e0c07a;
+  --wx-metal: #d4c49a;
+  --wx-water: #7ab8d8;
+  --wx-wood-soft: rgba(110, 207, 154, 0.18);
+  --wx-fire-soft: rgba(240, 120, 96, 0.18);
+  --wx-earth-soft: rgba(224, 192, 122, 0.18);
+  --wx-metal-soft: rgba(212, 196, 154, 0.18);
+  --wx-water-soft: rgba(122, 184, 216, 0.18);
+  --metric-strong: #6fd4ba;
+  --metric-weak: #e09070;
+  --metric-mid: #a8bdb2;
+  --metric-xi: #6fd4ba;
+  --metric-ji: #f07860;
+  --metric-cong: #e0c07a;
+  --metric-yun: #7ab8d8;
+  --band-high: #6fd4ba;
+  --band-mid: #e0c07a;
+  --band-low: #f07860;
+  --accent: #d4a574;
+}
+
+/* 五行工具类（细盘 / 芯片复用） */
+.wx-木 { color: var(--wx-wood); }
+.wx-火 { color: var(--wx-fire); }
+.wx-土 { color: var(--wx-earth); }
+.wx-金 { color: var(--wx-metal); }
+.wx-水 { color: var(--wx-water); }
+/* 晴：暖金纸感 */
+html[data-weather='clear'][data-theme='light'] {
+  --ink: #2a1f12;
+  --ink-soft: #5c4a32;
+  --paper: #f6edd8;
+  --paper-deep: #e8d4a8;
+  --seal: #c45a28;
+  --teal: #c4841f;
+  --gold: #b8860b;
+  --line: rgba(42, 31, 18, 0.16);
+  --muted: #8a7355;
+  --surface: rgba(255, 250, 235, 0.55);
+  --surface-strong: rgba(255, 248, 230, 0.88);
+  --surface-solid: #fff8ea;
+  --input-bg: rgba(255, 252, 244, 0.92);
+  --chip-on: #fff4d6;
+  --on-accent: #fff8ea;
+  --stripe: rgba(42, 31, 18, 0.04);
+}
+html[data-weather='clear'][data-theme='dark'] {
+  --ink: #fff3d6;
+  --ink-soft: #e0c89a;
+  --paper: #1a140c;
+  --paper-deep: #0f0b06;
+  --seal: #f08850;
+  --teal: #e0a84a;
+  --gold: #f0c86a;
+  --line: rgba(255, 243, 214, 0.2);
+  --muted: #c4a878;
+  --surface: rgba(40, 32, 18, 0.85);
+  --surface-strong: rgba(48, 38, 22, 0.94);
+  --surface-solid: #241c10;
+  --input-bg: #140f08;
+  --chip-on: #1a140c;
+  --on-accent: #1a140c;
+}
+
+/* 多云：青灰冷静 */
+html[data-weather='cloud'][data-theme='light'] {
+  --ink: #1a242c;
+  --ink-soft: #3d4e5a;
+  --paper: #e4eaef;
+  --paper-deep: #cfd8e0;
+  --seal: #a04838;
+  --teal: #4a6d7c;
+  --gold: #8a7a5a;
+  --line: rgba(26, 36, 44, 0.14);
+  --muted: #6a7c88;
+  --surface: rgba(255, 255, 255, 0.5);
+  --surface-strong: rgba(248, 250, 252, 0.9);
+  --surface-solid: #f2f5f8;
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --chip-on: #eef2f5;
+  --on-accent: #f2f5f8;
+}
+html[data-weather='cloud'][data-theme='dark'] {
+  --ink: #e8eef2;
+  --ink-soft: #b0bec8;
+  --paper: #121820;
+  --paper-deep: #0a0e14;
+  --seal: #e07060;
+  --teal: #7aa8bc;
+  --gold: #c4b48a;
+  --line: rgba(232, 238, 242, 0.2);
+  --muted: #8a9eaa;
+  --surface: rgba(24, 32, 40, 0.88);
+  --surface-strong: rgba(30, 40, 50, 0.95);
+  --surface-solid: #1a222c;
+  --input-bg: #0e141a;
+  --chip-on: #121820;
+  --on-accent: #0e141a;
+}
+
+/* 雨 / 雷雨：墨蓝 */
+html[data-weather='rain'][data-theme='light'],
+html[data-weather='storm'][data-theme='light'] {
+  --ink: #142032;
+  --ink-soft: #3a4e68;
+  --paper: #d8e4f0;
+  --paper-deep: #b8cce0;
+  --seal: #b03848;
+  --teal: #2a5a8a;
+  --gold: #6a8098;
+  --line: rgba(20, 32, 50, 0.16);
+  --muted: #5a7088;
+  --surface: rgba(240, 246, 252, 0.55);
+  --surface-strong: rgba(236, 244, 252, 0.9);
+  --surface-solid: #e8f0f8;
+  --input-bg: rgba(248, 252, 255, 0.92);
+  --chip-on: #dce8f4;
+  --on-accent: #e8f0f8;
+}
+html[data-weather='rain'][data-theme='dark'],
+html[data-weather='storm'][data-theme='dark'] {
+  --ink: #dce8f4;
+  --ink-soft: #9ab0c8;
+  --paper: #0c141e;
+  --paper-deep: #060a12;
+  --seal: #f07080;
+  --teal: #5a9ad4;
+  --gold: #8ab0d0;
+  --line: rgba(220, 232, 244, 0.2);
+  --muted: #7a94ac;
+  --surface: rgba(18, 28, 40, 0.88);
+  --surface-strong: rgba(24, 36, 52, 0.95);
+  --surface-solid: #121c2a;
+  --input-bg: #080e16;
+  --chip-on: #0c141e;
+  --on-accent: #080e16;
+}
+html[data-weather='storm'][data-theme='light'] {
+  --teal: #3a3a7a;
+  --seal: #8a2840;
+}
+html[data-weather='storm'][data-theme='dark'] {
+  --teal: #8a8ae0;
+  --seal: #f05070;
+}
+
+/* 雪：冷白冰蓝 */
+html[data-weather='snow'][data-theme='light'] {
+  --ink: #1a2838;
+  --ink-soft: #4a6078;
+  --paper: #eef4fa;
+  --paper-deep: #d8e6f2;
+  --seal: #a05060;
+  --teal: #3a7a9a;
+  --gold: #7a90a8;
+  --line: rgba(26, 40, 56, 0.14);
+  --muted: #6880a0;
+  --surface: rgba(255, 255, 255, 0.65);
+  --surface-strong: rgba(252, 254, 255, 0.92);
+  --surface-solid: #f6fafc;
+  --input-bg: rgba(255, 255, 255, 0.95);
+  --chip-on: #e8f2fa;
+  --on-accent: #f6fafc;
+}
+html[data-weather='snow'][data-theme='dark'] {
+  --ink: #e8f2fa;
+  --ink-soft: #a8c0d4;
+  --paper: #0e161e;
+  --paper-deep: #080c12;
+  --seal: #e08090;
+  --teal: #7ab8d8;
+  --gold: #a0c0d8;
+  --line: rgba(232, 242, 250, 0.2);
+  --muted: #88a8c0;
+  --surface: rgba(20, 30, 40, 0.88);
+  --surface-strong: rgba(28, 40, 52, 0.95);
+  --surface-solid: #141e28;
+  --input-bg: #0a1016;
+  --chip-on: #0e161e;
+  --on-accent: #0a1016;
+}
+
+/* 雾：灰绿朦胧 */
+html[data-weather='fog'][data-theme='light'] {
+  --ink: #2a302c;
+  --ink-soft: #5a645e;
+  --paper: #e4e6e2;
+  --paper-deep: #d0d4ce;
+  --seal: #8a5040;
+  --teal: #5a7068;
+  --gold: #8a8070;
+  --line: rgba(42, 48, 44, 0.14);
+  --muted: #788078;
+  --surface: rgba(248, 248, 246, 0.55);
+  --surface-strong: rgba(244, 244, 242, 0.9);
+  --surface-solid: #f0f0ee;
+  --input-bg: rgba(252, 252, 250, 0.92);
+  --chip-on: #e8eae6;
+  --on-accent: #f0f0ee;
+}
+html[data-weather='fog'][data-theme='dark'] {
+  --ink: #e4e8e4;
+  --ink-soft: #b0b8b0;
+  --paper: #141816;
+  --paper-deep: #0a0c0a;
+  --seal: #d08070;
+  --teal: #8aa898;
+  --gold: #b0a890;
+  --line: rgba(228, 232, 228, 0.18);
+  --muted: #909890;
+  --surface: rgba(28, 32, 30, 0.88);
+  --surface-strong: rgba(36, 40, 38, 0.95);
+  --surface-solid: #1c201e;
+  --input-bg: #0e100e;
+  --chip-on: #141816;
+  --on-accent: #0e100e;
+}
+
+/* 天气主题背景：随氛围明显换场 */
+html[data-weather='clear'][data-theme='light'] body {
+  background:
+    radial-gradient(ellipse 90% 55% at 12% -8%, rgba(255, 190, 70, 0.45), transparent 52%),
+    radial-gradient(ellipse 60% 40% at 95% 90%, rgba(200, 120, 40, 0.18), transparent 50%),
+    linear-gradient(165deg, #ffe9b0 0%, var(--paper) 42%, var(--paper-deep) 100%);
+}
+html[data-weather='clear'][data-theme='dark'] body {
+  background:
+    radial-gradient(ellipse 80% 50% at 15% 0%, rgba(220, 150, 40, 0.28), transparent 55%),
+    linear-gradient(165deg, #2a1c08 0%, var(--paper) 45%, var(--paper-deep) 100%);
+}
+html[data-weather='cloud'][data-theme='light'] body {
+  background:
+    radial-gradient(ellipse 100% 60% at 50% -10%, rgba(140, 160, 180, 0.4), transparent 55%),
+    linear-gradient(165deg, #c8d4de 0%, var(--paper) 45%, var(--paper-deep) 100%);
+}
+html[data-weather='cloud'][data-theme='dark'] body {
+  background:
+    radial-gradient(ellipse 90% 55% at 40% 0%, rgba(80, 100, 120, 0.35), transparent 55%),
+    linear-gradient(165deg, #1a222c 0%, var(--paper) 45%, var(--paper-deep) 100%);
+}
+html[data-weather='rain'][data-theme='light'] body,
+html[data-weather='storm'][data-theme='light'] body {
+  background:
+    radial-gradient(ellipse 85% 55% at 20% 0%, rgba(70, 120, 180, 0.38), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(40, 70, 120, 0.2), transparent 50%),
+    linear-gradient(165deg, #9eb8d4 0%, var(--paper) 45%, var(--paper-deep) 100%);
+}
+html[data-weather='rain'][data-theme='dark'] body,
+html[data-weather='storm'][data-theme='dark'] body {
+  background:
+    radial-gradient(ellipse 80% 50% at 25% 0%, rgba(50, 100, 180, 0.35), transparent 55%),
+    linear-gradient(165deg, #0a1528 0%, var(--paper) 45%, var(--paper-deep) 100%);
+}
+html[data-weather='snow'][data-theme='light'] body {
+  background:
+    radial-gradient(ellipse 90% 55% at 30% -5%, rgba(220, 235, 250, 0.7), transparent 55%),
+    linear-gradient(165deg, #f4f8fc 0%, var(--paper) 45%, var(--paper-deep) 100%);
+}
+html[data-weather='snow'][data-theme='dark'] body {
+  background:
+    radial-gradient(ellipse 85% 50% at 35% 0%, rgba(140, 180, 220, 0.22), transparent 55%),
+    linear-gradient(165deg, #101820 0%, var(--paper) 45%, var(--paper-deep) 100%);
+}
+html[data-weather='fog'][data-theme='light'] body {
+  background:
+    radial-gradient(ellipse 120% 70% at 50% 10%, rgba(170, 175, 168, 0.5), transparent 60%),
+    linear-gradient(165deg, #d0d4ce 0%, var(--paper) 50%, var(--paper-deep) 100%);
+}
+html[data-weather='fog'][data-theme='dark'] body {
+  background:
+    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(100, 110, 100, 0.3), transparent 55%),
+    linear-gradient(165deg, #181c18 0%, var(--paper) 45%, var(--paper-deep) 100%);
 }
 
 * {
@@ -25,6 +374,15 @@ body,
 #app {
   margin: 0;
   min-height: 100%;
+  /* 安全区改由壳层处理，避免双重 padding 挤窄内容 */
+  padding: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -35,6 +393,14 @@ body {
     radial-gradient(ellipse 70% 50% at 100% 100%, rgba(181, 64, 42, 0.1), transparent 50%),
     linear-gradient(160deg, #f3f7f4 0%, var(--paper) 45%, var(--paper-deep) 100%);
   background-attachment: fixed;
+  overscroll-behavior-y: none;
+}
+
+html[data-theme='dark'] body {
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(94, 201, 173, 0.16), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(224, 106, 82, 0.12), transparent 50%),
+    linear-gradient(160deg, #121a17 0%, var(--paper) 45%, var(--paper-deep) 100%);
 }
 
 /* 细密斜纹，营造纸面层次 */
@@ -53,6 +419,17 @@ body::before {
   );
 }
 
+html[data-theme='dark'] body::before {
+  opacity: 0.22;
+  background-image: repeating-linear-gradient(
+    -18deg,
+    transparent,
+    transparent 11px,
+    rgba(230, 239, 233, 0.04) 11px,
+    rgba(230, 239, 233, 0.04) 12px
+  );
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -60,15 +437,56 @@ a {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
+  max-width: 100%;
+}
+
+/* Android：输入框至少 16px，减少聚焦时系统强制缩放 */
+input,
+select,
+textarea {
+  font-size: 16px;
 }
 
 button {
   cursor: pointer;
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
 }
 
-/* 入场：品牌与内容轻微上浮 */
+/* 页面通用：避免横向溢出，底边给 FAB 让位；勿强制改写各页 panel/宫位底色 */
+.page {
+  width: 100%;
+  max-width: 100%;
+  padding-bottom: calc(var(--page-pad-bottom) + env(safe-area-inset-bottom, 0px));
+  overflow-x: hidden;
+}
+
+.page .head h1,
+.page header h1 {
+  font-family: var(--font-brand);
+  letter-spacing: 0.08em;
+}
+
+.page .panel,
+.page .result {
+  max-width: none;
+  width: 100%;
+}
+
+/* 宽表横向滚动容器（细盘等） */
+.scroll-x {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* 入场：品牌与内容轻微上浮。结束态必须是 transform:none，
+ * 否则 Chromium 会把祖先当成 fixed 包含块，原生 datalist 会飘到远处。 */
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -76,7 +494,7 @@ button {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -94,4 +512,194 @@ button {
 
 .rise {
   animation: rise-in 0.55s ease both;
+}
+
+/* PrimeVue 下拉挂到 body，压过命师助手与 sticky 导航 */
+.p-select-overlay,
+.p-autocomplete-overlay {
+  z-index: 80;
+}
+
+@media (max-width: 860px) {
+  :root {
+    /* 底 Tab 本体高度（不含 home indicator） */
+    --tab-bar-height: 56px;
+    /* 回顶/助手抬到 Tab 之上 */
+    --dock-back-top-bottom: calc(12px + var(--tab-bar-height));
+    --dock-back-top-height: 40px;
+    --dock-fab-gap: 10px;
+    /* 仅给 FAB/回顶留白；Tab 高度由 App .main 的 padding 承担，避免叠双份 */
+    --page-pad-bottom: 72px;
+  }
+
+  body {
+    /* 移动端 fixed 背景偶发闪烁，改成局部 */
+    background-attachment: scroll;
+  }
+
+  /* 触控友好：导航与主按钮 */
+  .nav-item {
+    min-height: var(--touch-min);
+    display: flex;
+    align-items: center;
+  }
+
+  input,
+  select,
+  textarea,
+  button.primary,
+  button.ghost {
+    min-height: var(--touch-min);
+  }
+
+  /* 标题字号收敛，避免窄屏顶破 */
+  .page .head h1,
+  .page header h1 {
+    font-size: clamp(1.35rem, 5.5vw, 1.85rem);
+    word-break: break-word;
+  }
+
+  /* 页面容器：手机满宽、避免横向撑破 */
+  .page {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  /* 表单在窄屏纵向堆叠，输入框拉满 */
+  .page .form > label {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .page .form input,
+  .page .form select,
+  .page .form textarea {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* 排盘等宽表横向滚动，不撑破视口 */
+  .table-wrap {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* 超窄屏（常见手机竖屏） */
+@media (max-width: 420px) {
+  :root {
+    --tab-bar-height: 54px;
+    --page-pad-bottom: 64px;
+  }
+}
+
+/* ========== 暗夜可读性：覆盖各页硬编码浅底 / 浅字 ========== */
+html[data-theme='dark'] input,
+html[data-theme='dark'] select,
+html[data-theme='dark'] textarea {
+  color: var(--ink);
+  background: var(--input-bg);
+  border-color: var(--line);
+  caret-color: var(--teal);
+}
+
+html[data-theme='dark'] input::placeholder,
+html[data-theme='dark'] textarea::placeholder {
+  color: color-mix(in srgb, var(--ink-soft) 75%, transparent);
+  opacity: 1;
+}
+
+html[data-theme='dark'] option {
+  background: var(--surface-solid);
+  color: var(--ink);
+}
+
+/* 半透明白卡片 → 主题表面（勿覆盖宫位/风水吉凶格等语义底色） */
+html[data-theme='dark'] .panel,
+html[data-theme='dark'] .block,
+html[data-theme='dark'] .card,
+html[data-theme='dark'] .lib-card,
+html[data-theme='dark'] .store-card,
+html[data-theme='dark'] .book-card,
+html[data-theme='dark'] .chip-row .chip,
+html[data-theme='dark'] .pill {
+  background: var(--surface-strong);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+html[data-theme='dark'] .soft,
+html[data-theme='dark'] .muted,
+html[data-theme='dark'] .hint,
+html[data-theme='dark'] .sub,
+html[data-theme='dark'] .meta,
+html[data-theme='dark'] .brand-sub,
+html[data-theme='dark'] .empty,
+html[data-theme='dark'] .footnote {
+  color: var(--ink-soft);
+}
+
+html[data-theme='dark'] table th,
+html[data-theme='dark'] .pan-table th,
+html[data-theme='dark'] thead {
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--surface-solid) 88%, var(--teal));
+}
+
+html[data-theme='dark'] table td,
+html[data-theme='dark'] .pan-table td {
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+html[data-theme='dark'] table tr:nth-child(even) td {
+  background: var(--stripe);
+}
+
+/* 主按钮字色：暗夜用深字配亮 teal，避免浅字贴浅按钮 */
+html[data-theme='dark'] button.primary,
+html[data-theme='dark'] .btn-primary,
+html[data-theme='dark'] .nav-item.active {
+  color: var(--on-accent);
+}
+
+html[data-theme='dark'] .ghost,
+html[data-theme='dark'] button.ghost {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+html[data-theme='dark'] .ghost:hover,
+html[data-theme='dark'] button.ghost:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+/* 词典弹层阴影在暗夜用更深的遮罩感 */
+html[data-theme='dark'] .dict-pop {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+/* PrimeVue 下拉在暗夜 */
+html[data-theme='dark'] .p-select-overlay,
+html[data-theme='dark'] .p-autocomplete-overlay,
+html[data-theme='dark'] .p-select-list,
+html[data-theme='dark'] .p-autocomplete-list {
+  background: var(--surface-solid);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+html[data-theme='dark'] .p-select-option,
+html[data-theme='dark'] .p-autocomplete-option {
+  color: var(--ink);
+}
+
+html[data-theme='dark'] .p-select-option.p-focus,
+html[data-theme='dark'] .p-select-option.p-selected,
+html[data-theme='dark'] .p-autocomplete-option.p-focus,
+html[data-theme='dark'] .p-autocomplete-option.p-selected {
+  background: color-mix(in srgb, var(--teal) 22%, transparent);
+  color: var(--ink);
 }
