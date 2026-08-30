@@ -2,6 +2,7 @@
  * 订单状态中文映射（MVP 人工审批）。
  */
 export const ORDER_STATUS_LABEL: Record<string, string> = {
+  draft: '待付款/待提交',
   pending: '待审批',
   approved: '已通过',
   rejected: '已拒绝'

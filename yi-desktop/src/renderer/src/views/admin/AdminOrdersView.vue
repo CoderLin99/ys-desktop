@@ -90,14 +90,18 @@ onMounted(() => void load())
     <div v-else class="list">
       <article v-for="o in orders" :key="o.id" class="card">
         <header>
-          <strong>{{ o.email }}</strong>
+          <strong>{{ o.order_no }}</strong>
           <span class="badge" :class="o.status">{{ orderStatusLabel(o.status) }}</span>
         </header>
-        <p class="meta">{{ new Date(o.created_at).toLocaleString('zh-CN') }}</p>
+        <p class="meta">{{ o.email }} · {{ new Date(o.created_at).toLocaleString('zh-CN') }}</p>
         <p v-if="o.note" class="note">{{ o.note }}</p>
+        <a v-if="o.proof_url" :href="o.proof_url" target="_blank" rel="noopener" class="proof-thumb">
+          <img :src="o.proof_url" alt="付款截图" />
+        </a>
         <p v-if="o.admin_note" class="admin-note">管理员：{{ o.admin_note }}</p>
         <div v-if="o.status === 'pending'" class="actions">
           <button type="button" class="primary" @click="approve(o.id)">通过 (+{{ approveDays }}天)</button>
+          <button type="button" class="ghost mini" @click="copyText(o.order_no)">复制订单号</button>
           <button type="button" class="ghost mini" @click="copyText(o.email)">复制邮箱</button>
           <button type="button" class="ghost" @click="rejectingId = o.id">拒绝</button>
         </div>
@@ -171,6 +175,19 @@ header {
   font-size: 0.88rem;
   color: var(--ink-soft);
   margin: 6px 0 0;
+}
+.badge.draft {
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+.proof-thumb {
+  display: block;
+  margin-top: 10px;
+  max-width: 200px;
+}
+.proof-thumb img {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--line);
 }
 .actions {
   display: flex;

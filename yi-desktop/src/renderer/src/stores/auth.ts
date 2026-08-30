@@ -8,6 +8,11 @@ import { getSupabase, type Database } from '../lib/supabase'
 import { isCloudMembershipMode, isSupabaseConfigured } from '../lib/cloudConfig'
 import { isAiConfigured, loadAiSettings } from '@rules/bazi/aiPolish'
 import { isTauriRuntime } from '../tauriBridge'
+import {
+  createDraftOrder,
+  submitDraftOrder,
+  uploadOrderProof
+} from '../services/orderService'
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
 type MembershipRow = Database['public']['Tables']['memberships']['Row']
@@ -22,10 +27,10 @@ export const useAuthStore = defineStore('auth', () => {
   const profile = ref<ProfileRow | null>(null)
   /** 会员记录 */
   const membership = ref<MembershipRow | null>(null)
-  /** 最近订单 */
+  /** 最近订单（任意状态） */
   const latestOrder = ref<OrderRow | null>(null)
-  /** 待审批订单（MVP 人工审批） */
-  const pendingOrder = ref<OrderRow | null>(null)
+  /** 未完结订单：draft 或 pending */
+  const openOrder = ref<OrderRow | null>(null)
   /** 初始化中 */
   const booting = ref(false)
   /** 是否已完成首次 init */
@@ -44,8 +49,10 @@ export const useAuthStore = defineStore('auth', () => {
     if (!membership.value?.expire_at) return false
     return new Date(membership.value.expire_at) > new Date()
   })
-  /** 是否有待审批申请 */
-  const hasPendingOrder = computed(() => pendingOrder.value?.status === 'pending')
+  /** 是否有待审批申请（已提交截图） */
+  const hasPendingOrder = computed(() => openOrder.value?.status === 'pending')
+  /** 是否有 draft 订单（已生成订单号，待付款上传） */
+  const hasDraftOrder = computed(() => openOrder.value?.status === 'draft')
 
   /** 管理员待审批数量（仅 admin 拉取后有效） */
   const adminPendingCount = ref(0)
@@ -76,13 +83,13 @@ export const useAuthStore = defineStore('auth', () => {
       profile.value = null
       membership.value = null
       latestOrder.value = null
-      pendingOrder.value = null
+      openOrder.value = null
       adminPendingCount.value = 0
       return
     }
     const sb = getSupabase()
     const uid = user.value.id
-    const [pRes, mRes, oRes, pendRes] = await Promise.all([
+    const [pRes, mRes, oRes, openRes] = await Promise.all([
       sb.from('profiles').select('*').eq('id', uid).maybeSingle(),
       sb.from('memberships').select('*').eq('user_id', uid).maybeSingle(),
       sb
@@ -96,13 +103,15 @@ export const useAuthStore = defineStore('auth', () => {
         .from('orders')
         .select('*')
         .eq('user_id', uid)
-        .eq('status', 'pending')
+        .in('status', ['draft', 'pending'])
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle()
     ])
     profile.value = pRes.data ?? null
     membership.value = mRes.data ?? null
     latestOrder.value = oRes.data ?? null
-    pendingOrder.value = pendRes.data ?? null
+    openOrder.value = openRes.data ?? null
 
     if (profile.value?.role === 'admin') {
       const { count } = await sb
@@ -198,27 +207,33 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * 提交会员开通申请。
-   * @param note 用户备注（转账信息）
-   * @param proofUrl 截图 URL（可选）
+   * 生成 draft 订单号（第一步）。
    */
-  async function applyMembership(note?: string, proofUrl?: string): Promise<void> {
+  async function createMembershipOrder(): Promise<OrderRow> {
     if (!user.value) throw new Error('请先登录')
-    if (!emailVerified.value) throw new Error('请先验证邮箱后再申请开通')
-    if (hasPendingOrder.value) throw new Error('您已有待审批申请，请等待管理员处理')
-    const sb = getSupabase()
-    const { error: err } = await sb.from('orders').insert({
-      user_id: user.value.id,
-      email: user.value.email || profile.value?.email || '',
-      note: note?.trim() || null,
-      proof_url: proofUrl?.trim() || null
-    })
-    if (err) {
-      if (/unique|duplicate/i.test(err.message)) {
-        throw new Error('您已有待审批申请，请勿重复提交')
-      }
-      throw new Error(err.message)
+    if (!emailVerified.value) throw new Error('请先验证邮箱')
+    if (openOrder.value) throw new Error('您已有进行中的订单，请继续完成付款与提交')
+    const row = await createDraftOrder(
+      user.value.id,
+      user.value.email || profile.value?.email || ''
+    )
+    await refreshProfile()
+    return row
+  }
+
+  /**
+   * 上传截图并提交审批（第二步）。
+   * @param file 付款截图
+   * @param note 补充说明
+   */
+  async function submitMembershipOrder(file: File, note?: string): Promise<void> {
+    if (!user.value) throw new Error('请先登录')
+    const order = openOrder.value
+    if (!order || order.status !== 'draft') {
+      throw new Error('请先生成订单号')
     }
+    const proofUrl = await uploadOrderProof(user.value.id, order.order_no, file)
+    await submitDraftOrder(order.id, user.value.id, proofUrl, note)
     await refreshProfile()
   }
 
@@ -228,8 +243,9 @@ export const useAuthStore = defineStore('auth', () => {
     profile,
     membership,
     latestOrder,
-    pendingOrder,
+    openOrder,
     hasPendingOrder,
+    hasDraftOrder,
     adminPendingCount,
     booting,
     error,
@@ -245,7 +261,8 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     resetPassword,
-    applyMembership,
+    createMembershipOrder,
+    submitMembershipOrder,
     refreshProfile
   }
 })

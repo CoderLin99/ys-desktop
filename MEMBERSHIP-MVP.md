@@ -16,6 +16,7 @@
 2. **SQL Editor** 依次执行：
    - `supabase/migrations/001_membership.sql`
    - `supabase/migrations/002_mvp_orders_unique_pending.sql`
+   - `supabase/migrations/003_order_no_and_proofs.sql`
 3. **Authentication → Providers → Email**：开启，勾选 **Confirm email**
 4. **Settings → API** 复制：
    - Project URL → `VITE_SUPABASE_URL`
@@ -97,8 +98,8 @@ npm run web
 
 | 角色 | 操作 |
 |------|------|
-| **用户** | 注册 → 验证邮箱 → **会员中心** → 扫码转账 → 填备注（写邮箱）→ **我已支付，申请开通** |
-| **你** | 打开 **管理 → 订单审批** → 对照支付宝到账 → 点 **通过**（默认 +30 天） |
+| **用户** | 会员中心 → **生成订单号** → 支付宝转账（**备注填订单号**）→ **上传付款截图** → 提交审批 |
+| **你** | **管理 → 订单审批** → 对照订单号 + 截图 + 支付宝到账 → **通过** |
 
 通过后用户刷新页面即可用 **命师助手 / 八字 AI**。
 

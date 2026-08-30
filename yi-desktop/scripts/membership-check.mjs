@@ -58,7 +58,8 @@ for (const [key, label] of optional) {
 console.log('\n--- Supabase（一次性）---')
 console.log('1. 执行 supabase/migrations/001_membership.sql')
 console.log('2. 执行 supabase/migrations/002_mvp_orders_unique_pending.sql')
-console.log('3. Auth 开启 Email + Confirm email')
+console.log('3. 执行 supabase/migrations/003_order_no_and_proofs.sql')
+console.log('4. Auth 开启 Email + Confirm email')
 console.log('4. 注册后：update profiles set role=\'admin\' where email=\'你的邮箱\';')
 
 console.log('\n--- Cloudflare Worker ---')

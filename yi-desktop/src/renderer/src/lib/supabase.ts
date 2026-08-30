@@ -19,7 +19,8 @@ export interface Database {
           id: string
           user_id: string
           email: string
-          status: 'pending' | 'approved' | 'rejected'
+          order_no: string
+          status: 'draft' | 'pending' | 'approved' | 'rejected'
           note: string | null
           proof_url: string | null
           admin_note: string | null
@@ -29,6 +30,8 @@ export interface Database {
         Insert: {
           user_id: string
           email: string
+          order_no: string
+          status?: 'draft' | 'pending' | 'approved' | 'rejected'
           note?: string | null
           proof_url?: string | null
         }
