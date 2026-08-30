@@ -94,8 +94,8 @@ export interface GoldenZiWeiCase {
   day: number
   hour: number
   gender: 'male' | 'female'
-  /** 与 iztro 应对齐的命宫、身宫（经实测 5 组全一致） */
-  expectIztroSoulBody?: { mingZhi: string; shenZhi: string }
+  /** 与 iztro 应对齐的命宫、身宫、五行局 */
+  expectIztro: { mingZhi: string; shenZhi: string; wuXingJu: string }
 }
 
 export const ZIWEI_GOLDEN_CASES: GoldenZiWeiCase[] = [
@@ -106,7 +106,7 @@ export const ZIWEI_GOLDEN_CASES: GoldenZiWeiCase[] = [
     day: 1,
     hour: 12,
     gender: 'female',
-    expectIztroSoulBody: { mingZhi: '亥', shenZhi: '亥' }
+    expectIztro: { mingZhi: '亥', shenZhi: '亥', wuXingJu: '土五局' }
   },
   {
     label: '1988-12-10 男 未时',
@@ -115,7 +115,7 @@ export const ZIWEI_GOLDEN_CASES: GoldenZiWeiCase[] = [
     day: 10,
     hour: 14,
     gender: 'male',
-    expectIztroSoulBody: { mingZhi: '巳', shenZhi: '未' }
+    expectIztro: { mingZhi: '巳', shenZhi: '未', wuXingJu: '土五局' }
   },
   {
     label: '2000-08-16 女 巳时',
@@ -124,7 +124,7 @@ export const ZIWEI_GOLDEN_CASES: GoldenZiWeiCase[] = [
     day: 16,
     hour: 10,
     gender: 'female',
-    expectIztroSoulBody: { mingZhi: '卯', shenZhi: '丑' }
+    expectIztro: { mingZhi: '卯', shenZhi: '丑', wuXingJu: '土五局' }
   },
   {
     label: '1995-03-15 男 卯时',
@@ -133,7 +133,7 @@ export const ZIWEI_GOLDEN_CASES: GoldenZiWeiCase[] = [
     day: 15,
     hour: 6,
     gender: 'male',
-    expectIztroSoulBody: { mingZhi: '子', shenZhi: '午' }
+    expectIztro: { mingZhi: '子', shenZhi: '午', wuXingJu: '火六局' }
   },
   {
     label: '1985-07-20 女 亥时',
@@ -142,7 +142,7 @@ export const ZIWEI_GOLDEN_CASES: GoldenZiWeiCase[] = [
     day: 20,
     hour: 22,
     gender: 'female',
-    expectIztroSoulBody: { mingZhi: '申', shenZhi: '午' }
+    expectIztro: { mingZhi: '申', shenZhi: '午', wuXingJu: '水二局' }
   }
 ]
 

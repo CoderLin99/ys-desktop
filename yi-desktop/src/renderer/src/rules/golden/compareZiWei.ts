@@ -111,7 +111,7 @@ export function compareZiWeiWithIztro(c: GoldenZiWeiCase): ZiWeiIztroCompareResu
 }
 
 /**
- * 校验命宫、身宫与 iztro 一致；不一致则抛错。
+ * 校验命宫、身宫、五行局与 iztro / 期望一致；不一致则抛错。
  * @param c 黄金样例
  * @param result 对照结果
  */
@@ -119,13 +119,15 @@ export function assertZiWeiSoulBodyMatchesIztro(
   c: GoldenZiWeiCase,
   result: ZiWeiIztroCompareResult
 ): void {
-  if (c.expectIztroSoulBody) {
-    if (result.ours.mingZhi !== c.expectIztroSoulBody.mingZhi) {
-      throw new Error(`[${c.label}] 命宫期望 ${c.expectIztroSoulBody.mingZhi}，得到 ${result.ours.mingZhi}`)
-    }
-    if (result.ours.shenZhi !== c.expectIztroSoulBody.shenZhi) {
-      throw new Error(`[${c.label}] 身宫期望 ${c.expectIztroSoulBody.shenZhi}，得到 ${result.ours.shenZhi}`)
-    }
+  const expect = c.expectIztro
+  if (result.ours.mingZhi !== expect.mingZhi) {
+    throw new Error(`[${c.label}] 命宫期望 ${expect.mingZhi}，得到 ${result.ours.mingZhi}`)
+  }
+  if (result.ours.shenZhi !== expect.shenZhi) {
+    throw new Error(`[${c.label}] 身宫期望 ${expect.shenZhi}，得到 ${result.ours.shenZhi}`)
+  }
+  if (result.ours.wuXingJu !== expect.wuXingJu) {
+    throw new Error(`[${c.label}] 五行局期望 ${expect.wuXingJu}，得到 ${result.ours.wuXingJu}`)
   }
   if (result.ours.mingZhi !== result.iztro.soulBranch) {
     throw new Error(
@@ -137,4 +139,27 @@ export function assertZiWeiSoulBodyMatchesIztro(
       `[${c.label}] 身宫与 iztro 不一致：自研 ${result.ours.shenZhi}，iztro ${result.iztro.bodyBranch}`
     )
   }
+  if (result.ours.wuXingJu !== result.iztro.fiveElementsClass) {
+    throw new Error(
+      `[${c.label}] 五行局与 iztro 不一致：自研 ${result.ours.wuXingJu}，iztro ${result.iztro.fiveElementsClass}`
+    )
+  }
+}
+
+/**
+ * 校验十四主星十二宫布局与 iztro 完全一致。
+ * @param c 黄金样例
+ * @param result 对照结果
+ */
+export function assertZiWeiMajorStarsMatchIztro(
+  c: GoldenZiWeiCase,
+  result: ZiWeiIztroCompareResult
+): void {
+  if (result.majorStarDiffs.length === 0) return
+  const detail = result.majorStarDiffs
+    .map((d) => `${d.zhi}: 自研[${d.ours.join(',')}] vs iztro[${d.iztro.join(',')}]`)
+    .join('\n  ')
+  throw new Error(
+    `[${c.label}] 主星布局与 iztro 不一致（${result.majorStarMatchCount}/12）\n  ${detail}`
+  )
 }

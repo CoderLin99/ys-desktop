@@ -1244,8 +1244,19 @@ describe('紫微完整排盘', () => {
     expect(c.palaces[0].name).toBe('命宫')
     expect(c.sihua).toHaveLength(4)
     expect(c.daXian.length).toBeGreaterThanOrEqual(8)
-    expect(c.wuXingJu).toMatch(/局/)
+    // 丁亥命宫 → 土五局；紫微在子、命宫天机（对齐 iztro）
+    expect(c.wuXingJu).toBe('土五局')
+    expect(c.mingZhi).toBe('亥')
+    expect(c.palaces[0].majors).toContain('天机')
+    expect(c.palaces.find((p) => p.majors.includes('紫微'))?.zhi).toBe('子')
     expect(formatZiWeiFacts(c)).toContain('十二宫')
     expect(c.ragQuery).toContain('紫微')
+  })
+
+  it('命宫干支定五行局与起紫微星口诀', async () => {
+    const { calcWuXingJu, calcZiWeiIndex, calcTianFuIndex } = await import('./ziwei/chart')
+    expect(calcWuXingJu('丁', '亥')).toBe('土五局')
+    expect(calcZiWeiIndex(7, 5)).toBe(0)
+    expect(calcTianFuIndex(0)).toBe(4)
   })
 })

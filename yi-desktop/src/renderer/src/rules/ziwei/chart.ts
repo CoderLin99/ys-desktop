@@ -1,6 +1,7 @@
 /**
  * 紫微斗数排盘：十二宫、十四主星、四化、常用辅星、大限。
- * 算法为通行口诀实现，供完整展示与 AI 润色；派系差异处以本盘自洽为准。
+ * 五行局按命宫干支推算；紫微/天府起星对齐通行「局数除日数」口诀（与 iztro 一致）。
+ * 辅星等派系差异处以本盘自洽为准。
  */
 import { Solar } from 'lunar-javascript'
 
@@ -135,28 +136,34 @@ export interface ZiWeiChart {
   ragQuery: string
 }
 
-/** 五行局：按命宫地支近似（通行简化表） */
-const JU_BY_ZHI: Record<string, string> = {
-  子: '水二局',
-  丑: '金四局',
-  寅: '火六局',
-  卯: '木三局',
-  辰: '水二局',
-  巳: '土五局',
-  午: '火六局',
-  未: '金四局',
-  申: '水二局',
-  酉: '木三局',
-  戌: '土五局',
-  亥: '火六局'
-}
-
+/** 五行局名 → 局数 */
 const JU_NUM: Record<string, number> = {
   水二局: 2,
   木三局: 3,
   金四局: 4,
   土五局: 5,
   火六局: 6
+}
+
+/**
+ * 命宫干支定五行局（纳音局数法）。
+ * 算法对齐通行口诀与 iztro `getFiveElementsClass`：
+ * 天干序号÷2+1，地支以六位循环÷2+1，相加满五去五，再查局表。
+ *
+ * @param mingGan 命宫天干（五虎遁）
+ * @param mingZhi 命宫地支
+ * @returns 水二局｜木三局｜金四局｜土五局｜火六局
+ */
+export function calcWuXingJu(mingGan: string, mingZhi: string): string {
+  const table = ['木三局', '金四局', '水二局', '火六局', '土五局'] as const
+  const ganIdx = GAN.indexOf(mingGan as (typeof GAN)[number])
+  const zhiIdx = ZHI.indexOf(mingZhi as (typeof ZHI)[number])
+  if (ganIdx < 0 || zhiIdx < 0) return '水二局'
+  const stemNum = Math.floor(ganIdx / 2) + 1
+  const branchNum = Math.floor((zhiIdx % 6) / 2) + 1
+  let idx = stemNum + branchNum
+  while (idx > 5) idx -= 5
+  return table[idx - 1] ?? '水二局'
 }
 
 /**
@@ -220,15 +227,44 @@ export function calcShenZhiIndex(month: number, hourZhiIdx: number): number {
 }
 
 /**
- * 紫微星地支序。
- * @param day 农历日
+ * 紫微星地支序（子=0）。
+ * 口诀：局数除日数，商数宫前走；有余则加数凑整，奇数逆回、偶数顺行。
+ * 对齐 iztro `getStartIndex`（其内部以寅=0，此处换算为子=0）。
+ *
+ * @param day 农历日（初一=1）
  * @param ju 局数 2–6
  */
 export function calcZiWeiIndex(day: number, ju: number): number {
-  let q = Math.floor(day / ju)
-  const r = day % ju
-  if (r !== 0) q += 1
-  return (2 + (q - 1) + 120) % 12
+  let offset = -1
+  let quotient = 0
+  let remainder = -1
+  do {
+    offset += 1
+    const divisor = day + offset
+    quotient = Math.floor(divisor / ju)
+    remainder = divisor % ju
+  } while (remainder !== 0)
+
+  quotient %= 12
+  // iztro 寅宫起算索引
+  let yinIdx = quotient - 1
+  if (offset % 2 === 0) yinIdx += offset
+  else yinIdx -= offset
+  yinIdx = ((yinIdx % 12) + 12) % 12
+  // 寅=0 → 子=0
+  return (yinIdx + 2) % 12
+}
+
+/**
+ * 天府星地支序（子=0）：与紫微相对（寅宫起对宫公式换算）。
+ * 紫微在寅则天府同宫；其余为「十二减去紫微寅序」再换子序。
+ *
+ * @param ziweiIdx 紫微地支序（子=0）
+ */
+export function calcTianFuIndex(ziweiIdx: number): number {
+  const yinIdx = (ziweiIdx - 2 + 12) % 12
+  const tianfuYin = (12 - yinIdx) % 12
+  return (tianfuYin + 2) % 12
 }
 
 /** 紫微系相对偏移 */
@@ -416,10 +452,11 @@ export function buildZiWeiChart(input: {
   const shenIdx = calcShenZhiIndex(month, hourZhiIdx)
   const mingZhi = ZHI[mingIdx]
   const shenZhi = ZHI[shenIdx]
-  const wuXingJu = JU_BY_ZHI[mingZhi] || '水二局'
+  const mingGan = ganForZhi(yearGan, mingZhi)
+  const wuXingJu = calcWuXingJu(mingGan, mingZhi)
   const ju = JU_NUM[wuXingJu] || 2
   const ziweiIdx = calcZiWeiIndex(day, ju)
-  const tianfuIdx = (ziweiIdx + 6) % 12
+  const tianfuIdx = calcTianFuIndex(ziweiIdx)
 
   /** 地支 → 主星 */
   const majorsAt = new Map<number, string[]>()
