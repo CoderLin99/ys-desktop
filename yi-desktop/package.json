@@ -46,14 +46,19 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@lhk714/bazi-mcp": "^4.2.2",
+    "@openfate/bazi-engine": "^1.1.2",
     "@province-city-china/level": "^8.5.8",
     "@tauri-apps/cli": "^2.8.0",
     "@types/node": "^22.10.2",
     "@vitejs/plugin-vue": "^5.2.1",
     "iztro": "^2.6.0",
+    "lunar-typescript": "^1.8.6",
+    "mystilight-8char": "^1.0.0",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
     "vitest": "^2.1.8",
-    "vue-tsc": "^2.1.10"
+    "vue-tsc": "^2.1.10",
+    "xuantian-bazi": "^0.2.0"
   }
 }
