@@ -31,6 +31,16 @@ export interface GoldenSolarCase {
  * 八字黄金样例：柱干支来自节气历对照（lunar-javascript / 手工核验）。
  * 新增样例时请同时跑 buildBaZi 与外部排盘工具核对。
  */
+/** 神煞黄金样例（通行口诀 + 修复回归） */
+export interface GoldenShenShaCase extends GoldenSolarCase {
+  /** 必须命中的神煞名 */
+  mustContain: string[]
+  /** 修复后不应误报的神煞 */
+  mustNotContain?: string[]
+  /** 分柱最少项数 */
+  minByPillar?: Partial<Record<'年' | '月' | '日' | '时', number>>
+}
+
 export const BAZI_GOLDEN_CASES: GoldenSolarCase[] = [
   {
     label: '1999-06-29 小暑前午月',
@@ -82,6 +92,98 @@ export const BAZI_GOLDEN_CASES: GoldenSolarCase[] = [
     day: 4,
     hour: 11,
     expected: { year: '癸卯', month: '乙丑', day: '戊戌', hour: '戊午' }
+  }
+]
+
+/**
+ * 神煞黄金样例：mustContain 来自修复后 collectShenSha 与通行表核对。
+ * mustNotContain 用于锁定已知误报回归（如子月天德、学堂误用文昌表）。
+ */
+export const BAZI_SHENSHA_GOLDEN_CASES: GoldenShenShaCase[] = [
+  {
+    label: '1999-01-10 三柱 · 壬日丑月',
+    year: 1999,
+    month: 1,
+    day: 10,
+    hour: null,
+    expected: { year: '戊寅', month: '乙丑', day: '壬戌', hour: '' },
+    mustContain: [
+      '文昌',
+      '天厨',
+      '寡宿',
+      '华盖',
+      '阴差阳错',
+      '天乙贵人',
+      '金舆',
+      '红鸾',
+      '天德合',
+      '月德合'
+    ],
+    mustNotContain: ['学堂', '词馆', '天德']
+  },
+  {
+    label: '1999-06-29 午月 · 壬子日',
+    year: 1999,
+    month: 6,
+    day: 29,
+    hour: 7,
+    minute: 20,
+    expected: { year: '己卯', month: '庚午', day: '壬子', hour: '甲辰' },
+    mustContain: [
+      '天喜',
+      '勾煞',
+      '飞刃',
+      '红艳煞',
+      '禄神',
+      '将星',
+      '天乙贵人',
+      '羊刃',
+      '孤鸾煞',
+      '九丑日'
+    ],
+    minByPillar: { 月: 2, 日: 3 }
+  },
+  {
+    label: '1990-05-20 巳月 · 乙日',
+    year: 1990,
+    month: 5,
+    day: 20,
+    hour: 14,
+    minute: 30,
+    expected: { year: '庚午', month: '辛巳', day: '乙酉', hour: '癸未' },
+    mustContain: ['天德', '月德', '学堂', '文昌', '天乙贵人', '将星'],
+    mustNotContain: ['词馆']
+  },
+  {
+    label: '2000-01-01 子月 · 戊日',
+    year: 2000,
+    month: 1,
+    day: 1,
+    hour: 12,
+    expected: { year: '己卯', month: '丙子', day: '戊午', hour: '戊午' },
+    mustContain: ['天乙贵人', '禄神', '将星', '桃花', '羊刃'],
+    mustNotContain: ['天德', '天德合']
+  },
+  {
+    label: '1988-12-10 子月 · 己日',
+    year: 1988,
+    month: 12,
+    day: 10,
+    hour: 14,
+    minute: 10,
+    expected: { year: '戊辰', month: '甲子', day: '己亥', hour: '辛未' },
+    mustContain: ['天乙贵人', '天医', '华盖', '红鸾', '亡神'],
+    mustNotContain: ['天德', '天德合']
+  },
+  {
+    label: '2024-02-04 丑月 · 魁罡日',
+    year: 2024,
+    month: 2,
+    day: 4,
+    hour: 11,
+    expected: { year: '癸卯', month: '乙丑', day: '戊戌', hour: '戊午' },
+    mustContain: ['魁罡', '十恶大败', '天德合', '月德合', '寡宿', '华盖'],
+    mustNotContain: ['天德']
   }
 ]
 

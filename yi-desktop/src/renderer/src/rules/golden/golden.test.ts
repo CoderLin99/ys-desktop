@@ -5,8 +5,9 @@
  * 或：npx vitest run src/renderer/src/rules/golden/golden.test.ts
  */
 import { describe, expect, it } from 'vitest'
-import { BAZI_GOLDEN_CASES, ZIWEI_GOLDEN_CASES } from './cases'
+import { BAZI_GOLDEN_CASES, BAZI_SHENSHA_GOLDEN_CASES, ZIWEI_GOLDEN_CASES } from './cases'
 import { assertBaZiGoldenCase, assertBaZiMatchesEightCharDirect } from './compareBazi'
+import { assertShenShaGoldenCase } from './compareShenSha'
 import {
   assertZiWeiMajorStarsMatchIztro,
   assertZiWeiSoulBodyMatchesIztro,
@@ -67,6 +68,12 @@ describe('黄金样例 · 紫微 vs iztro（命宫身宫五行局）', () => {
   it.each(ZIWEI_GOLDEN_CASES)('$label 命宫身宫五行局与 iztro 一致', (c) => {
     const result = compareZiWeiWithIztro(c)
     assertZiWeiSoulBodyMatchesIztro(c, result)
+  })
+})
+
+describe('黄金样例 · 八字神煞', () => {
+  it.each(BAZI_SHENSHA_GOLDEN_CASES)('$label 神煞命中符合通行表', (c) => {
+    assertShenShaGoldenCase(c)
   })
 })
 

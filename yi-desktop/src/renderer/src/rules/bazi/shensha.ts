@@ -135,8 +135,8 @@ export const SHENSHA_DOCS: { name: string; rule: string; brief: string }[] = [
   { name: '天德合', rule: '月支天德之合', brief: '逢合得天德助力。' },
   { name: '月德合', rule: '月支月德之合', brief: '逢合得月德助力。' },
   { name: '德秀贵人', rule: '月支与天干组合', brief: '文秀、贵气之象（各派口诀略异）。' },
-  { name: '词馆', rule: '按日干纳音查', brief: '文才、考试、文学缘。' },
-  { name: '学堂', rule: '按日干纳音查', brief: '学业开窍、进修缘。' }
+  { name: '词馆', rule: '按日干查临官支', brief: '文才、考试、文学缘。' },
+  { name: '学堂', rule: '按日干查长生支', brief: '学业开窍、进修缘。' }
 ]
 
 /** 天乙贵人：日干 → 贵人地支 */
@@ -340,8 +340,24 @@ const TIANDE: Record<DiZhi, string> = {
   酉: '寅',
   戌: '丙',
   亥: '乙',
-  子: '己',
+  子: '巳',
   丑: '庚'
+}
+
+/** 地支六合：支 → 合支（天德在支时取天德合） */
+const ZHI_LIUHE: Record<DiZhi, DiZhi> = {
+  子: '丑',
+  丑: '子',
+  寅: '亥',
+  亥: '寅',
+  卯: '戌',
+  戌: '卯',
+  辰: '酉',
+  酉: '辰',
+  巳: '申',
+  申: '巳',
+  午: '未',
+  未: '午'
 }
 
 /** 月德：月支 → 月德天干 */
@@ -509,8 +525,22 @@ const TONGZI: Record<string, DiZhi[]> = {
   亥卯未: ['子', '卯']
 }
 
-/** 词馆：日干 → 词馆支（长生学堂一派简化） */
+/** 词馆：日干 → 临官支（通行长生/临官派） */
 const CIGUAN: Record<TianGan, DiZhi> = {
+  甲: '寅',
+  乙: '卯',
+  丙: '巳',
+  丁: '午',
+  戊: '巳',
+  己: '午',
+  庚: '申',
+  辛: '酉',
+  壬: '亥',
+  癸: '子'
+}
+
+/** 学堂：日干 → 长生支（通行长生/临官派） */
+const XUETANG: Record<TianGan, DiZhi> = {
   甲: '亥',
   乙: '午',
   丙: '寅',
@@ -520,20 +550,6 @@ const CIGUAN: Record<TianGan, DiZhi> = {
   庚: '巳',
   辛: '子',
   壬: '申',
-  癸: '卯'
-}
-
-/** 学堂：日干 → 学堂支 */
-const XUETANG: Record<TianGan, DiZhi> = {
-  甲: '巳',
-  乙: '午',
-  丙: '申',
-  丁: '酉',
-  戊: '申',
-  己: '酉',
-  庚: '亥',
-  辛: '子',
-  壬: '寅',
   癸: '卯'
 }
 
@@ -991,37 +1007,74 @@ export function collectShenSha(chart: BaZiChart): ShenShaHit[] {
     }
   }
 
-  // 天德合 / 月德合
+  // 天德 / 天德合（月支查：干见干、支见支；合取五合干或六合支）
   {
     const td = TIANDE[monthZhi]
     if (DIZHI.includes(td as DiZhi)) {
-      const loc = locate(chart, [td as DiZhi])
+      const tdZhi = td as DiZhi
+      const loc = locate(chart, [tdZhi])
       if (loc.pillars.length) {
         pushHit(hits, {
-          name: '天德合',
+          name: '天德',
           ...loc,
+          brief: '天德庇佑、逢凶化减。',
+          tone: '吉',
+          basis: `月支${monthZhi}天德在支${tdZhi}；${locPhrase(loc)}`
+        })
+      }
+      const heZhi = ZHI_LIUHE[tdZhi]
+      const heLoc = locate(chart, [heZhi])
+      if (heLoc.pillars.length) {
+        pushHit(hits, {
+          name: '天德合',
+          ...heLoc,
           brief: '逢合得天德助力。',
           tone: '吉',
-          basis: `月支${monthZhi}天德在支${td}；${locPhrase(loc)}`
+          basis: `月支${monthZhi}天德支${tdZhi}，六合合支${heZhi}；${locPhrase(heLoc)}`
         })
       }
     } else {
-      const he = GAN_HE[td as TianGan]
-      const gLoc = locateGan(chart, [he])
+      const tdGan = td as TianGan
+      const gLoc = locateGan(chart, [tdGan])
       if (gLoc.pillars.length) {
+        pushHit(hits, {
+          name: '天德',
+          zhi: [],
+          pillars: gLoc.pillars,
+          brief: `天德在${tdGan}透干。`,
+          tone: '吉',
+          basis: `月支${monthZhi}天德干${tdGan}透出；见${gLoc.pillars.join('、')}柱`
+        })
+      }
+      const heGan = GAN_HE[tdGan]
+      const heLoc = locateGan(chart, [heGan])
+      if (heLoc.pillars.length) {
         pushHit(hits, {
           name: '天德合',
           zhi: [],
-          pillars: gLoc.pillars,
-          brief: `月令天德在${td}，合干${he}透出。`,
+          pillars: heLoc.pillars,
+          brief: `月令天德在${tdGan}，合干${heGan}透出。`,
           tone: '吉',
-          basis: `月支${monthZhi}天德干${td}，取合干${he}透出；见${gLoc.pillars.join('、')}柱`
+          basis: `月支${monthZhi}天德干${tdGan}，取合干${heGan}透出；见${heLoc.pillars.join('、')}柱`
         })
       }
     }
   }
+
+  // 月德 / 月德合
   {
     const yd = YUEDE[monthZhi]
+    const yLoc = locateGan(chart, [yd])
+    if (yLoc.pillars.length) {
+      pushHit(hits, {
+        name: '月德',
+        zhi: [],
+        pillars: yLoc.pillars,
+        brief: `月德在${yd}透干。`,
+        tone: '吉',
+        basis: `月支${monthZhi}月德${yd}透干；见${yLoc.pillars.join('、')}柱`
+      })
+    }
     const he = GAN_HE[yd]
     const gLoc = locateGan(chart, [he])
     if (gLoc.pillars.length) {
@@ -1336,49 +1389,6 @@ export function collectShenSha(chart: BaZiChart): ShenShaHit[] {
     }
   }
 
-  // 天德 / 月德本体
-  {
-    const td = TIANDE[monthZhi]
-    if (DIZHI.includes(td as DiZhi)) {
-      const loc = locate(chart, [td as DiZhi])
-      if (loc.pillars.length) {
-        pushHit(hits, {
-          name: '天德',
-          ...loc,
-          brief: '天德庇佑、逢凶化减。',
-          tone: '吉',
-          basis: `月支${monthZhi}天德在支${td}；${locPhrase(loc)}`
-        })
-      }
-    } else {
-      const gLoc = locateGan(chart, [td as TianGan])
-      if (gLoc.pillars.length) {
-        pushHit(hits, {
-          name: '天德',
-          zhi: [],
-          pillars: gLoc.pillars,
-          brief: `天德在${td}透干。`,
-          tone: '吉',
-          basis: `月支${monthZhi}天德干${td}透出；见${gLoc.pillars.join('、')}柱`
-        })
-      }
-    }
-  }
-  {
-    const yd = YUEDE[monthZhi]
-    const gLoc = locateGan(chart, [yd])
-    if (gLoc.pillars.length) {
-      pushHit(hits, {
-        name: '月德',
-        zhi: [],
-        pillars: gLoc.pillars,
-        brief: `月德在${yd}透干。`,
-        tone: '吉',
-        basis: `月支${monthZhi}月德${yd}透干；见${gLoc.pillars.join('、')}柱`
-      })
-    }
-  }
-
   // 词馆 / 学堂
   {
     const loc = locate(chart, [CIGUAN[dayGan]])
@@ -1388,7 +1398,7 @@ export function collectShenSha(chart: BaZiChart): ShenShaHit[] {
         ...loc,
         brief: '文才、考试、文学缘。',
         tone: '吉',
-        basis: `日干${dayGan}纳音查词馆→${CIGUAN[dayGan]}；${locPhrase(loc)}`
+        basis: `日干${dayGan}临官查词馆→${CIGUAN[dayGan]}；${locPhrase(loc)}`
       })
     }
   }
@@ -1400,7 +1410,7 @@ export function collectShenSha(chart: BaZiChart): ShenShaHit[] {
         ...loc,
         brief: '学业开窍、进修缘。',
         tone: '吉',
-        basis: `日干${dayGan}纳音查学堂→${XUETANG[dayGan]}；${locPhrase(loc)}`
+        basis: `日干${dayGan}长生查学堂→${XUETANG[dayGan]}；${locPhrase(loc)}`
       })
     }
   }
