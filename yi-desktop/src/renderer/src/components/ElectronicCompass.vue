@@ -391,38 +391,33 @@ const dialStyle = computed(() => ({
 }
 
 .dial {
+  /* 盘面始终墨黑（不跟日间/暗夜 --ink 走，避免暗色主题盘面发白） */
+  --dial-face: #0c1210;
+  --dial-face-deep: #050807;
   position: absolute;
   inset: 0;
   border-radius: 50%;
   background:
-    radial-gradient(
-      circle at 50% 40%,
-      color-mix(in srgb, var(--gold) 14%, transparent),
-      transparent 46%
-    ),
-    radial-gradient(
-      circle at 50% 50%,
-      color-mix(in srgb, var(--ink) 82%, #0a1210) 0%,
-      color-mix(in srgb, var(--ink) 92%, #000) 100%
-    );
-  border: 2px solid color-mix(in srgb, var(--gold) 70%, var(--line));
+    radial-gradient(circle at 50% 38%, rgba(166, 132, 58, 0.18), transparent 46%),
+    radial-gradient(circle at 50% 50%, var(--dial-face) 0%, var(--dial-face-deep) 100%);
+  border: 2px solid color-mix(in srgb, var(--gold) 75%, #3a3020);
   box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--teal) 28%, transparent),
-    inset 0 0 36px color-mix(in srgb, #000 55%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--gold) 25%, transparent),
-    0 16px 40px color-mix(in srgb, var(--ink) 28%, transparent),
-    0 0 32px color-mix(in srgb, var(--teal) 18%, transparent);
+    inset 0 0 0 2px color-mix(in srgb, var(--teal) 35%, transparent),
+    inset 0 0 40px rgba(0, 0, 0, 0.65),
+    0 0 0 1px color-mix(in srgb, var(--gold) 30%, transparent),
+    0 16px 40px rgba(0, 0, 0, 0.35),
+    0 0 32px color-mix(in srgb, var(--teal) 22%, transparent);
   transition: transform 0.1s linear;
   overflow: hidden;
 }
 .e-compass.on .dial {
   border-color: var(--gold);
   box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--teal) 40%, transparent),
-    inset 0 0 36px color-mix(in srgb, #000 55%, transparent),
+    inset 0 0 0 2px color-mix(in srgb, var(--teal) 45%, transparent),
+    inset 0 0 40px rgba(0, 0, 0, 0.65),
     0 0 0 1px var(--gold),
-    0 16px 40px color-mix(in srgb, var(--ink) 28%, transparent),
-    0 0 40px color-mix(in srgb, var(--teal) 28%, transparent);
+    0 16px 40px rgba(0, 0, 0, 0.4),
+    0 0 44px color-mix(in srgb, var(--teal) 32%, transparent);
 }
 
 .ring {
@@ -457,21 +452,28 @@ const dialStyle = computed(() => ({
 }
 .deg-tick {
   position: absolute;
-  left: 50%;
+  inset: 0;
+  margin: auto;
+  width: 1px;
+  height: 100%;
+  background: transparent;
+  transform-origin: center center;
+  pointer-events: none;
+}
+.deg-tick::after {
+  content: '';
+  position: absolute;
   top: 1.8%;
+  left: 0;
   width: 1px;
   height: 5px;
-  margin-left: -0.5px;
-  background: color-mix(in srgb, var(--gold) 55%, #fff);
-  transform-origin: 50% calc(var(--compass-size) * 0.482);
-  opacity: 0.55;
+  background: rgba(224, 192, 122, 0.7);
 }
-.deg-tick.major {
+.deg-tick.major::after {
   height: 9px;
   width: 1.5px;
-  margin-left: -0.75px;
-  opacity: 0.95;
-  background: var(--gold);
+  left: -0.25px;
+  background: #e0c07a;
 }
 .deg-num {
   position: absolute;
