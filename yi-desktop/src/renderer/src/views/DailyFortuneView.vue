@@ -398,6 +398,12 @@ h1 {
   margin-bottom: 12px;
 }
 
+@media (max-width: 640px) {
+  .do-avoid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .do-avoid h3 {
   margin: 0 0 8px;
   font-size: 0.95rem;

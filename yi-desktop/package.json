@@ -1,6 +1,6 @@
 {
   "name": "yi-desktop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "BaZi and LiuYao desktop/android app (Tauri 2)",
   "author": "Eason",
   "license": "MIT",
@@ -29,7 +29,8 @@
     "classics:fetch-wenzhen": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/resolve-node.ps1 scripts/fetch-wenzhen-classics.mjs",
     "classics:fetch-fengshui": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/resolve-node.ps1 scripts/fetch-wenzhen-classics.mjs --fengshui",
     "classics:index": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/resolve-node.ps1 scripts/index-classics.mjs",
-    "classics:build": "npm run classics:fetch && npm run classics:index"
+    "classics:build": "npm run classics:fetch && npm run classics:index",
+    "places:cn": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/resolve-node.ps1 scripts/generate-birth-places-cn.mjs"
   },
   "dependencies": {
     "@primeuix/themes": "^1.2.3",
@@ -41,6 +42,7 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@province-city-china/level": "^8.5.8",
     "@tauri-apps/cli": "^2.8.0",
     "@types/node": "^22.10.2",
     "@vitejs/plugin-vue": "^5.2.1",

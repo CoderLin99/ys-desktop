@@ -33,6 +33,7 @@ const glossText = computed(() => {
 
 /**
  * 按锚点把小窗摆在名词下方（不够空间则上方），并夹在视口内。
+ * 窄屏改为近全宽浮层，避免贴边裁切与挡死主按钮。
  */
 async function placePanel(): Promise<void> {
   await nextTick()
@@ -41,11 +42,17 @@ async function placePanel(): Promise<void> {
   const gap = 8
   const vw = window.innerWidth
   const vh = window.innerHeight
+  const narrow = vw <= 860
   const rect = el.getBoundingClientRect()
-  const aw = Math.min(320, vw - 16)
+  const aw = narrow ? Math.min(vw - 16, 420) : Math.min(320, vw - 16)
   let left = 12
   let top = 72
-  if (props.anchor) {
+  if (narrow) {
+    // 手机：水平居中偏下，避开顶栏与底 Tab
+    left = Math.max(8, (vw - aw) / 2)
+    top = Math.min(vh * 0.28, vh - Math.min(rect.height, vh * 0.45) - 72)
+    if (top < 56) top = 56
+  } else if (props.anchor) {
     left = props.anchor.left
     top = props.anchor.bottom + gap
     if (top + rect.height > vh - 8) {
@@ -58,7 +65,8 @@ async function placePanel(): Promise<void> {
   panelStyle.value = {
     left: `${Math.round(left)}px`,
     top: `${Math.round(top)}px`,
-    width: `${aw}px`
+    width: `${aw}px`,
+    maxHeight: narrow ? `min(48dvh, ${Math.round(vh * 0.48)}px)` : `min(50vh, 360px)`
   }
 }
 
@@ -160,6 +168,15 @@ function onReposition(): void {
   box-shadow: 0 6px 20px color-mix(in srgb, var(--ink) 18%, transparent);
   font-size: 0.88rem;
   line-height: 1.5;
+}
+@media (max-width: 860px) {
+  .dict-pop {
+    max-height: min(48dvh, 360px);
+    border-radius: 12px;
+    font-size: 0.92rem;
+    /* 盖住内容但不压过底 Tab / 顶栏主题 */
+    z-index: 70;
+  }
 }
 .dict-head {
   display: flex;

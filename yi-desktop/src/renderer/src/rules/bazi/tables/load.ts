@@ -7,7 +7,14 @@ import strengthWeights from './strength-weights.json'
 import shishenBrief from './shishen-brief.json'
 import tiaohou from './tiaohou.json'
 import gloss from './gloss.json'
+import { PLAIN_JARGON_GLOSS } from '../jargonPlain'
 import type { WangXiang, WuXing } from '../../constants'
+
+/** 术语 → 白话快查 */
+const PLAIN_BY_TERM = Object.fromEntries(PLAIN_JARGON_GLOSS.map((e) => [e.term, e.plain])) as Record<
+  string,
+  string
+>
 
 /** 表版本说明文案（注入 rule 字段） */
 export function tableVersionNote(): string {
@@ -44,11 +51,15 @@ export function getShiShenBrief(ss: string): string {
 }
 
 /**
- * 指标概念释义（点击弹层用）。
+ * 指标概念释义（点击弹层用）：术语说明 + 白话。
  * @param key 指标名或结论短值
  */
 export function getMetricGloss(key: string): string {
-  return (gloss as Record<string, string>)[key] ?? '教学指标：点击查看本盘查法与代入过程。'
+  const jargon =
+    (gloss as Record<string, string>)[key] ?? '教学指标：点击查看本盘查法与代入过程。'
+  const plain = PLAIN_BY_TERM[key]
+  if (!plain) return jargon
+  return `${jargon}\n白话：${plain}`
 }
 
 /**

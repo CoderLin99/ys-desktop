@@ -149,6 +149,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDoc, true))
 .theme-wrap {
   position: relative;
   flex: 0 0 auto;
+  z-index: 90;
 }
 .theme-icon {
   display: inline-flex;
@@ -171,15 +172,18 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDoc, true))
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: 60;
+  z-index: 200;
   min-width: 196px;
   padding: 6px;
   border-radius: 12px;
   border: 1px solid var(--line);
+  /* 不透明实底，避免与顶栏/抽屉叠成「幽灵菜单」 */
   background: var(--surface-solid);
+  opacity: 1;
   box-shadow: var(--shadow);
   display: grid;
   gap: 4px;
+  pointer-events: auto;
 }
 .theme-menu button {
   display: grid;

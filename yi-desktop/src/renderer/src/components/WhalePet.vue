@@ -218,6 +218,27 @@ html[data-theme='dark'] .pet-label {
 .pet.disabled .sprite {
   filter: grayscale(0.4) drop-shadow(0 8px 10px rgba(18, 40, 72, 0.16));
 }
+/* 手机端缩小桌宠，减轻右下角遮挡主内容 */
+@media (max-width: 900px) {
+  .pet {
+    width: 96px;
+  }
+  .stage {
+    width: 88px;
+    height: 106px;
+  }
+  .bubble {
+    right: 0;
+    bottom: 108px;
+    max-width: 112px;
+    font-size: 0.62rem;
+    padding: 5px 8px;
+  }
+  .pet-label {
+    font-size: 0.64rem;
+    letter-spacing: 0.1em;
+  }
+}
 @keyframes pet-bob {
   0%,
   100% {

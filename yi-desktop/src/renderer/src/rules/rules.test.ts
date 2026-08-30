@@ -733,10 +733,18 @@ describe('六爻', () => {
 
 describe('助手轻量 Markdown', () => {
   it('把 **加粗** 转成 strong，并去掉裸星号', async () => {
-    const { stripMdBold, renderLiteMarkdown } = await import('./bazi/mdLite')
+    const { stripMdBold, renderLiteMarkdown, matchModuleTitleLine } = await import('./bazi/mdLite')
     expect(stripMdBold('见 **正官辛金** 当令')).toBe('见 正官辛金 当令')
-    expect(renderLiteMarkdown('见 **正官辛金** 当令')).toBe('见 <strong>正官辛金</strong> 当令')
+    expect(renderLiteMarkdown('见 **正官辛金** 当令')).toBe(
+      '见 <strong class="md-em">正官辛金</strong> 当令'
+    )
     expect(renderLiteMarkdown('<script>')).toBe('&lt;script&gt;')
+    expect(renderLiteMarkdown('## 事业\n正文')).toContain('class="md-h2"')
+    expect(renderLiteMarkdown('## 事业\n正文')).toContain('事业')
+    expect(renderLiteMarkdown('## 事业\n\n\n\n正文')).not.toMatch(/md-h2><\/div><br><br><br/)
+    expect(matchModuleTitleLine('【财运】')).toBe('财运')
+    expect(matchModuleTitleLine('**事业**')).toBe('事业')
+    expect(renderLiteMarkdown('【婚恋】\n相处尚可')).toContain('class="md-h2"')
   })
 })
 
@@ -1047,7 +1055,8 @@ describe('太极贵人 / 三太极', () => {
 
 describe('命师长设定与神煞叠见', () => {
   it('buildMingAgentRolePrompt(general) 含事业细项与健康学业', async () => {
-    const { buildMingAgentRolePrompt, MING_DISCLAIMER_FOOTER } = await import('./bazi/mingAgents')
+    const { buildMingAgentRolePrompt, MING_DISCLAIMER_FOOTER, generalModulesPolishGuide } =
+      await import('./bazi/mingAgents')
     const general = buildMingAgentRolePrompt('general')
     expect(general).toContain('事业')
     expect(general).toContain('职业倾向')
@@ -1059,12 +1068,18 @@ describe('命师长设定与神煞叠见', () => {
     expect(general).toContain('子女')
     expect(general).toContain('六亲')
     expect(general).toContain('财运')
+    expect(general).toContain('总断')
+    expect(general).toContain('断一下')
     expect(general).toContain(MING_DISCLAIMER_FOOTER)
     expect(general).not.toMatch(/大专/)
+    expect(generalModulesPolishGuide()).toContain('总断')
     const marriage = buildMingAgentRolePrompt('marriage')
     expect(marriage).toContain('婚恋')
     expect(marriage).toContain('姻缘席')
     expect(marriage).toContain(MING_DISCLAIMER_FOOTER)
+    expect(marriage).toMatch(/禁止主动展开|用户未点名/)
+    expect(marriage).not.toContain('【六亲】')
+    expect(marriage).toMatch(/专席一般不写「总断」/)
   })
 
   it('enrichShenShaWithStacks / formatShenShaStackSummary / stackLevelOf', async () => {
@@ -1146,6 +1161,32 @@ describe('日柱换日口径', () => {
       (a.pillars.hour && b.pillars.hour && a.pillars.hour.gz !== b.pillars.hour.gz)
     expect(diverged).toBe(true)
   })
+
+  it('晚子不换时柱须按当日日干五鼠遁（修正库次日干遁错位）', () => {
+    // 2000-01-01 23:00 晚子不换：日戊午；戊日子时=壬子（库曾错给甲子=次日己遁）
+    const c = buildBaZi(2000, 1, 1, 23, 0, { dayCutover: 'ziZheng' })
+    expect(c.pillars.day.gz).toBe('戊午')
+    expect(c.pillars.hour?.gz).toBe(hourGanFromDay(c.dayMaster, '子') + '子')
+    expect(c.pillars.hour?.gz).toBe('壬子')
+  })
+
+  it('子初换日 23 点：日时同干且与五鼠遁一致', () => {
+    const c = buildBaZi(2000, 1, 1, 23, 0, { dayCutover: 'ziChu' })
+    expect(c.pillars.day.gz).toBe('己未')
+    expect(c.pillars.hour?.gz).toBe(hourGanFromDay(c.dayMaster, '子') + '子')
+    expect(c.pillars.hour?.gz).toBe('甲子')
+  })
+
+  it('日间时辰时柱与五鼠遁、十二时辰对照一致', () => {
+    for (const h of [0, 1, 7, 11, 14, 19, 22]) {
+      const c = buildBaZi(2000, 1, 1, h, 0)
+      const z = c.pillars.hour!.zhi
+      const expectGz = hourGanFromDay(c.dayMaster, z) + z
+      expect(c.pillars.hour!.gz).toBe(expectGz)
+      const v = buildHourVariants(c.dayMaster).find((x) => x.zhi === z)
+      expect(v?.pillar.gz).toBe(expectGz)
+    }
+  })
 })
 
 describe('出生地 UTC', () => {
@@ -1158,6 +1199,40 @@ describe('出生地 UTC', () => {
     expect(utcOffsetOf(ny!)).toBe(-5)
     const byAlias = filterBirthPlaces('London', 'intl')
     expect(byAlias.some((p) => p.name === '伦敦')).toBe(true)
+  })
+
+  it('泉港区可搜索且级联解析', async () => {
+    const {
+      pickBirthPlaceByQuery,
+      listPlaceLevel3,
+      resolveCascadePlace,
+      birthPlaceId,
+      PLACE_CITYWIDE
+    } = await import('./bazi/solarTime')
+    const qg = pickBirthPlaceByQuery('泉港', 'cn')
+    expect(qg?.name).toBe('泉港')
+    expect(qg?.city).toBe('泉州')
+    expect(qg!.longitude).toBeGreaterThan(118)
+    const districts = listPlaceLevel3('cn', '福建', '泉州')
+    expect(districts.some((d) => d.label === '泉港')).toBe(true)
+    expect(districts.some((d) => d.id === PLACE_CITYWIDE)).toBe(true)
+    const resolved = resolveCascadePlace('cn', '福建', '泉州', birthPlaceId(qg!))
+    expect(resolved?.name).toBe('泉港')
+  })
+
+  it('国内出生地覆盖全国区县量级', async () => {
+    const { placesByScope, listPlaceLevel1, listPlaceLevel2, listPlaceLevel3, pickBirthPlaceByQuery } =
+      await import('./bazi/solarTime')
+    const cn = placesByScope('cn')
+    // GB/T 2260：地级 300+ + 区县约 3000
+    expect(cn.length).toBeGreaterThan(3000)
+    expect(listPlaceLevel1('cn').length).toBeGreaterThanOrEqual(34)
+    expect(listPlaceLevel2('cn', '河北').length).toBeGreaterThan(10)
+    const sjz = listPlaceLevel3('cn', '河北', '石家庄')
+    expect(sjz.length).toBeGreaterThan(10)
+    // 抽样：朝阳区（北京）、天河（广州）可搜
+    expect(pickBirthPlaceByQuery('天河', 'cn')?.city).toBe('广州')
+    expect(pickBirthPlaceByQuery('朝阳', 'cn')?.province).toBeTruthy()
   })
 })
 

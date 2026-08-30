@@ -4,7 +4,7 @@
 
 ## 目标
 
-产出 Windows NSIS 安装包 `release/YiDesktop_0.1.1_x64-setup.exe`。
+产出 Windows NSIS 安装包 `release/YiDesktop_0.1.2_x64-setup.exe`。
 
 ## 前置条件
 
@@ -32,7 +32,7 @@ npm run build -- win
 
 | 路径 | 说明 |
 |------|------|
-| `release/YiDesktop_0.1.1_x64-setup.exe` | 稳定命名，便于分发 |
+| `release/YiDesktop_0.1.2_x64-setup.exe` | 稳定命名，便于分发 |
 | `src-tauri/target/release/bundle/nsis/` | Tauri 原始输出 |
 
 ## 禁止

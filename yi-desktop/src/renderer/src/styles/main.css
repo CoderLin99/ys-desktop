@@ -63,6 +63,10 @@
   --fab-stack-bottom: calc(
     var(--dock-back-top-bottom) + var(--dock-back-top-height) + var(--dock-fab-gap)
   );
+  /* 桌宠视觉高度（含气泡余量），用于底部内容避让 */
+  --fab-visual-height: 172px;
+  /* 顶栏高度（窄屏），抽屉 max-height 等共用 */
+  --topbar-height: 0px;
   /* 主区为 FAB/手势条预留 */
   --page-pad-bottom: 48px;
   --touch-min: 44px;
@@ -524,17 +528,31 @@ button {
   :root {
     /* 底 Tab 本体高度（不含 home indicator） */
     --tab-bar-height: 56px;
-    /* 回顶/助手抬到 Tab 之上 */
+    --topbar-height: 48px;
+    /* 回顶抬到 Tab 之上（不含 safe-area，定位时再加） */
     --dock-back-top-bottom: calc(12px + var(--tab-bar-height));
     --dock-back-top-height: 40px;
-    --dock-fab-gap: 10px;
-    /* 仅给 FAB/回顶留白；Tab 高度由 App .main 的 padding 承担，避免叠双份 */
-    --page-pad-bottom: 72px;
+    --dock-fab-gap: 8px;
+    /* 窄屏缩小桌宠后的占位 */
+    --fab-visual-height: 112px;
+    /*
+     * .main 已为 Tab 留白；.page 再为「回顶 + 桌宠」留白。
+     * 公式：视口需清出的高度 − Tab 已预留 ≈ 回顶高 + 间距 + 桌宠高 + 余量
+     */
+    --page-pad-bottom: calc(
+      var(--dock-back-top-height) + var(--dock-fab-gap) + var(--fab-visual-height) + 24px
+    );
   }
 
   body {
     /* 移动端 fixed 背景偶发闪烁，改成局部 */
     background-attachment: scroll;
+  }
+
+  /* 助手打开时隐藏回顶，避免与底栏抽屉叠两层浮钮 */
+  body:has(.ai-assist) .back-top {
+    opacity: 0;
+    pointer-events: none;
   }
 
   /* 触控友好：导航与主按钮 */
@@ -565,10 +583,29 @@ button {
     overflow-x: clip;
   }
 
+  /* 无 .page 的首页等：主区自身再垫一层 FAB 避让 */
+  .hero,
+  .home {
+    padding-bottom: calc(var(--page-pad-bottom) + env(safe-area-inset-bottom, 0px));
+  }
+
   /* 表单在窄屏纵向堆叠，输入框拉满 */
-  .page .form > label {
+  .page .form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 12px;
+  }
+  .page .form > label,
+  .page .form > .pv-field {
+    flex: 1 1 calc(50% - 12px);
+    min-width: min(100%, 140px);
+  }
+  .page .form > label:has(input.w-name),
+  .page .form > label:has(select.w-tone),
+  .page .form > .pv-place,
+  .page .form > .form-checks,
+  .page .form > .form-actions {
     flex: 1 1 100%;
-    min-width: 0;
   }
   .page .form input,
   .page .form select,
@@ -579,9 +616,17 @@ button {
   }
 
   /* 排盘等宽表横向滚动，不撑破视口 */
-  .table-wrap {
+  .table-wrap,
+  .scroll-x {
     max-width: 100%;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* 双列卡片在窄屏改单列，减少互相挤压 */
+  .do-avoid,
+  .pair-grid,
+  .two-col {
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -589,7 +634,15 @@ button {
 @media (max-width: 420px) {
   :root {
     --tab-bar-height: 54px;
-    --page-pad-bottom: 64px;
+    --fab-visual-height: 100px;
+    --page-pad-bottom: calc(
+      var(--dock-back-top-height) + var(--dock-fab-gap) + var(--fab-visual-height) + 20px
+    );
+  }
+
+  .page .form > label,
+  .page .form > .pv-field {
+    flex: 1 1 100%;
   }
 }
 

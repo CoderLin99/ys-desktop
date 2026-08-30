@@ -109,10 +109,12 @@ export const useThemeStore = defineStore('theme', {
         return
       }
 
+      // 显式日间/暗夜：清天气着色，强制写 data-theme，避免平板上残留 weather 半透明层
       applyWeatherToDocument('off')
       this.weatherMood = 'off'
       this.weatherBase = mode
       applyThemeBaseToDocument(mode)
+      document.documentElement.style.colorScheme = mode === 'dark' ? 'dark' : 'light'
     },
     /**
      * 兼容旧 UI：开关天气跟随。

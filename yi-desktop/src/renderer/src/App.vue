@@ -495,12 +495,15 @@ onBeforeUnmount(() => {
     padding-left: max(12px, env(safe-area-inset-left, 0px));
     padding-right: max(12px, env(safe-area-inset-right, 0px));
     border-bottom: 1px solid var(--line);
-    background: color-mix(in srgb, var(--surface-solid) 92%, transparent);
-    backdrop-filter: blur(10px);
+    /* 平板上勿半透明叠菜单，否则主题钮点不着、暗夜像失效 */
+    background: var(--surface-solid);
     position: relative;
-    z-index: 20;
+    z-index: 80;
     flex-shrink: 0;
-    min-height: 48px;
+    min-height: var(--topbar-height, 48px);
+    isolation: isolate;
+    /* 允许主题下拉溢出顶栏，不被裁切 */
+    overflow: visible;
   }
   .topbar-mark {
     width: 28px;
@@ -533,8 +536,8 @@ onBeforeUnmount(() => {
     padding: 12px 12px 16px;
     padding-left: max(12px, env(safe-area-inset-left, 0px));
     padding-right: max(12px, env(safe-area-inset-right, 0px));
-    /* 底 Tab 高度由全局 --tab-bar-height 预留，避免内容被挡 */
-    padding-bottom: calc(16px + var(--tab-bar-height) + env(safe-area-inset-bottom, 0px));
+    /* Tab + 内容底边距；各页 .page 再叠 FAB 避让，勿再加一份 tab */
+    padding-bottom: calc(12px + var(--tab-bar-height) + env(safe-area-inset-bottom, 0px));
   }
 
   .tab-bar {
@@ -609,7 +612,8 @@ onBeforeUnmount(() => {
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 55;
+    /* 高于助手 FAB，低于助手抽屉与顶栏 */
+    z-index: 58;
     background: color-mix(in srgb, var(--ink) 35%, transparent);
   }
   .more-sheet {
@@ -618,7 +622,7 @@ onBeforeUnmount(() => {
     left: 0;
     right: 0;
     bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px));
-    z-index: 56;
+    z-index: 59;
     max-height: min(58dvh, 420px);
     overflow: auto;
     padding: 10px 14px 18px;

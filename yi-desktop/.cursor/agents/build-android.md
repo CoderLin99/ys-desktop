@@ -4,7 +4,7 @@
 
 ## 目标
 
-产出 sideload 可装 APK：`release/YiDesktop_0.1.1_arm64.apk`（包名 `com.yi.desktop`，arm64-v8a）。
+产出 sideload 可装 APK：`release/YiDesktop_0.1.2_arm64.apk`（包名 `com.yi.desktop`，arm64-v8a）。
 
 ## 前置条件
 
@@ -45,7 +45,7 @@ npm run build -- android
 
 | 路径 | 说明 |
 |------|------|
-| `release/YiDesktop_0.1.1_arm64.apk` | 稳定命名 |
+| `release/YiDesktop_0.1.2_arm64.apk` | 稳定命名 |
 | `src-tauri/gen/android/app/build/outputs/` | Gradle 原始输出 |
 
 ## 禁止

@@ -343,8 +343,13 @@ export function buildBaZi(
 
   let hourPillar: Pillar | null = null
   if (!hourUnknown) {
-    const timeGz = eight.getTime()
-    hourPillar = buildPillar(timeGz[0] as TianGan, timeGz[1] as DiZhi, dayGan, false)
+    // 时支取自库；时干按「当日日干 × 五鼠遁」自算。
+    // lunar-javascript 在晚子不换（sect=2）时：日柱仍是当日，时干却按次日干遁
+    //（例：2000-01-01 23:00 日戊午、库给甲子；正统戊日子时为壬子），与十二时辰对照表不一致。
+    const timeGzLib = eight.getTime()
+    const hourZhi = timeGzLib[1] as DiZhi
+    const hourGan = hourGanFromDay(dayGan, hourZhi)
+    hourPillar = buildPillar(hourGan, hourZhi, dayGan, false)
   }
 
   const cutoverNote =

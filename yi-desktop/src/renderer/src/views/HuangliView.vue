@@ -1,9 +1,10 @@
 <script setup lang="ts">
 /**
- * 黄历页：日历选日 + 白话解读 + 传统宜忌明细。
+ * 黄历页：鼓轮选日（全宽展开）+ 白话解读 + 传统宜忌明细。
+ * 日期区复用 BirthDatePicker，避免小卡片内嵌滚动日历。
  */
-import { computed, onActivated, onMounted, ref } from 'vue'
-import DatePicker from 'primevue/datepicker'
+import { computed, onActivated, onMounted, ref, watch } from 'vue'
+import { Lunar } from 'lunar-javascript'
 import { buildHuangliDay, formatHuangliFacts, type HuangliDay } from '@rules/huangli/day'
 import {
   buildHuangliPlainRead,
@@ -11,16 +12,20 @@ import {
   type HuangliPlainRead
 } from '@rules/huangli/plain'
 import { scanZeJiDays, ZEJI_MATTERS, type ZeJiHit } from '@rules/huangli/zeji'
+import BirthDatePicker, { type BirthCalendarKind } from '../components/BirthDatePicker.vue'
 import { useAssistContextStore } from '../stores/assistContext'
 import { getCurrentPosition } from '../utils/deviceLocation'
 
 const assist = useAssistContextStore()
 
 const now = new Date()
-/** 日历选中日（与年/月/日数字双向同步） */
-const pickedDate = ref<Date>(new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+/** 历法：公历为主；选农历时推算前先换公历 */
+const calendar = ref<BirthCalendarKind>('solar')
+/** 年（随历法：公历年或农历年） */
 const year = ref(now.getFullYear())
+/** 月 1–12 */
 const month = ref(now.getMonth() + 1)
+/** 日 */
 const day = ref(now.getDate())
 const result = ref<HuangliDay | null>(null)
 /** 白话解读 */
@@ -31,7 +36,7 @@ const longitude = ref<number | null>(null)
 const accuracy = ref<number | null>(null)
 const locating = ref(false)
 const errMsg = ref('')
-/** 同步锁：避免日历 ↔ 数字互踢 */
+/** 同步锁：避免鼓轮 ↔ 数字框互踢 */
 const syncing = ref(false)
 /** 择吉事项 id */
 const zejiMatterId = ref(ZEJI_MATTERS[0]?.id ?? '婚嫁')
@@ -43,10 +48,69 @@ const zejiHits = ref<ZeJiHit[]>([])
 const zejiOptions = ZEJI_MATTERS
 
 /**
+ * 把表单年月日（可农历）换成排盘用公历。
+ * @returns 公历年月日；非法则 null
+ */
+function resolveSolarYmd(): { year: number; month: number; day: number } | null {
+  const y = year.value
+  const m = month.value
+  const d = day.value
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null
+  if (calendar.value === 'solar') {
+    const dt = new Date(y, m - 1, d)
+    if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null
+    return { year: y, month: m, day: d }
+  }
+  try {
+    const lu = Lunar.fromYmd(y, m, d)
+    const s = lu.getSolar()
+    return { year: s.getYear(), month: s.getMonth(), day: s.getDay() }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 顶栏大字摘要（公历优先展示实际查询日）。
+ */
+const dateHeroLabel = computed(() => {
+  const solar = resolveSolarYmd()
+  if (!solar) return `${year.value}年${month.value}月${day.value}日`
+  return `${solar.year}年${solar.month}月${solar.day}日`
+})
+
+/**
+ * 副标题：农历对照 / 干支等（有结果时用结果，否则提示）。
+ */
+const dateHeroSub = computed(() => {
+  if (result.value) {
+    const fest = [...result.value.festivals, ...result.value.otherFestivals]
+    const festPart = fest.length ? ` · ${fest.slice(0, 2).join('、')}` : ''
+    return `农历 ${result.value.lunarLabel} · ${result.value.dayGz}日${festPart}`
+  }
+  return calendar.value === 'solar' ? '公历选日 · 鼓轮滑动即查' : '农历选日 · 将自动换算公历'
+})
+
+/**
+ * 节日标签列表（白话区展示）。
+ */
+const festivalTags = computed(() => {
+  if (!result.value) return [] as string[]
+  return [...result.value.festivals, ...result.value.otherFestivals]
+})
+
+/**
  * 按事项扫描吉日列表。
  */
 function runZeJi(): void {
-  zejiHits.value = scanZeJiDays(zejiMatterId.value, pickedDate.value, zejiDays.value)
+  const solar = resolveSolarYmd()
+  if (!solar) {
+    errMsg.value = '日期不合法，请检查年/月/日'
+    return
+  }
+  const from = new Date(solar.year, solar.month - 1, solar.day)
+  zejiHits.value = scanZeJiDays(zejiMatterId.value, from, zejiDays.value)
 }
 
 /**
@@ -55,36 +119,13 @@ function runZeJi(): void {
  */
 function jumpZeJi(hit: ZeJiHit): void {
   const [y, m, d] = hit.solarLabel.split('-').map(Number)
-  const dt = new Date(y, m - 1, d)
   syncing.value = true
-  pickedDate.value = dt
-  applyDateParts(dt)
+  calendar.value = 'solar'
+  year.value = y
+  month.value = m
+  day.value = d
   syncing.value = false
   run()
-}
-
-/**
- * 从 Date 同步到年/月/日数字框。
- * @param d 选中日期
- */
-function applyDateParts(d: Date): void {
-  year.value = d.getFullYear()
-  month.value = d.getMonth() + 1
-  day.value = d.getDate()
-}
-
-/**
- * 从年/月/日拼 Date；非法则返回 null。
- */
-function partsToDate(): Date | null {
-  const y = year.value
-  const m = month.value
-  const d = day.value
-  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null
-  if (m < 1 || m > 12 || d < 1 || d > 31) return null
-  const dt = new Date(y, m - 1, d)
-  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null
-  return dt
 }
 
 /**
@@ -92,7 +133,12 @@ function partsToDate(): Date | null {
  */
 function run(): void {
   errMsg.value = ''
-  const dayData = buildHuangliDay(year.value, month.value, day.value)
+  const solar = resolveSolarYmd()
+  if (!solar) {
+    errMsg.value = '日期不合法，请检查年/月/日'
+    return
+  }
+  const dayData = buildHuangliDay(solar.year, solar.month, solar.day)
   result.value = dayData
   plain.value = buildHuangliPlainRead(dayData)
   const loc =
@@ -113,33 +159,10 @@ function run(): void {
 }
 
 /**
- * 日历变更：同步数字并刷新。
- * @param v DatePicker 值
+ * 鼓轮或数字框变更后刷新（带同步锁）。
  */
-function onCalendarChange(v: Date | Date[] | (Date | null)[] | null | undefined): void {
-  const d = Array.isArray(v) ? v[0] : v
-  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return
-  syncing.value = true
-  pickedDate.value = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  applyDateParts(pickedDate.value)
-  syncing.value = false
-  run()
-}
-
-/**
- * 数字框变更：合法则回写日历并刷新。
- */
-function onPartsChange(): void {
+function onDatePartsChange(): void {
   if (syncing.value) return
-  const dt = partsToDate()
-  if (!dt) {
-    errMsg.value = '日期不合法，请检查年/月/日'
-    return
-  }
-  errMsg.value = ''
-  syncing.value = true
-  pickedDate.value = dt
-  syncing.value = false
   run()
 }
 
@@ -163,14 +186,15 @@ async function locate(): Promise<void> {
 }
 
 /**
- * 切到今日并刷新。
+ * 切到今日（公历）并刷新。
  */
 function goToday(): void {
   const t = new Date()
-  const clean = new Date(t.getFullYear(), t.getMonth(), t.getDate())
   syncing.value = true
-  pickedDate.value = clean
-  applyDateParts(clean)
+  calendar.value = 'solar'
+  year.value = t.getFullYear()
+  month.value = t.getMonth() + 1
+  day.value = t.getDate()
   syncing.value = false
   run()
 }
@@ -182,8 +206,11 @@ function activateHuangli(): void {
   assist.setActiveFeature('huangli')
 }
 
-/** 日历面板内联展示，方便手机点选 */
-const calendarInline = computed(() => true)
+/** 鼓轮变更时自动查历（历法切换也重算） */
+watch([year, month, day, calendar], () => {
+  if (syncing.value) return
+  onDatePartsChange()
+})
 
 onMounted(() => {
   activateHuangli()
@@ -196,73 +223,104 @@ onActivated(() => {
 </script>
 
 <template>
-  <div class="page rise">
-    <header class="head">
+  <section class="page rise huangli">
+    <header class="page-head">
+      <p class="eyebrow">HUANGLI</p>
       <h1>黄历</h1>
-      <p>点日历选日，先看白话解读；传统宜忌可对照原文。可选定位仅作展示。</p>
+      <p class="lead">鼓轮选日，先看白话宜忌；传统原文可对照。可选定位仅作展示，不参与推算。</p>
     </header>
 
-    <div class="panel pick-panel">
-      <div class="cal-block">
-        <p class="cal-label">选日期</p>
-        <!-- 月份/星期等文案走 main.ts 全局 zh-CN locale，勿在此硬编码英文 -->
-        <DatePicker
-          v-model="pickedDate"
-          class="huangli-cal"
-          date-format="yy-mm-dd"
-          :inline="calendarInline"
-          :show-other-months="true"
-          :select-other-months="true"
-          @update:model-value="onCalendarChange"
-        />
-      </div>
-
-      <div class="parts-block">
-        <div class="parts-row">
-          <label>
-            年
-            <input v-model.number="year" type="number" min="1900" max="2100" @change="onPartsChange" />
-          </label>
-          <label>
-            月
-            <input v-model.number="month" type="number" min="1" max="12" @change="onPartsChange" />
-          </label>
-          <label>
-            日
-            <input v-model.number="day" type="number" min="1" max="31" @change="onPartsChange" />
-          </label>
+    <!-- 日期区：全宽展开，不塞进可滚动小卡片 -->
+    <section class="date-hero" aria-label="选择日期">
+      <div class="date-hero-top">
+        <div class="date-hero-copy">
+          <p class="date-kicker">查询日期</p>
+          <h2 class="date-big">{{ dateHeroLabel }}</h2>
+          <p class="date-sub">{{ dateHeroSub }}</p>
         </div>
-        <div class="parts-actions">
-          <button type="button" class="primary" @click="onPartsChange">查黄历</button>
-          <button type="button" class="ghost" @click="goToday">今日</button>
-          <button type="button" class="ghost" :disabled="locating" @click="locate">
+        <div class="date-hero-actions">
+          <button type="button" class="btn-ghost" @click="goToday">今日</button>
+          <button type="button" class="btn-ghost" :disabled="locating" @click="locate">
             {{ locating ? '定位中…' : '可选定位' }}
           </button>
         </div>
-        <p v-if="latitude != null" class="geo">
-          定位 {{ latitude.toFixed(5) }}, {{ longitude?.toFixed(5) }}
-          <template v-if="accuracy != null"> · 精度约 {{ Math.round(accuracy) }} 米</template>
-        </p>
-        <p v-if="errMsg" class="err">{{ errMsg }}</p>
       </div>
-    </div>
+
+      <!-- 鼓轮：占满合理宽度，滚动只发生在列内，非整卡嵌套滚动 -->
+      <BirthDatePicker
+        v-model:calendar="calendar"
+        v-model:year="year"
+        v-model:month="month"
+        v-model:day="day"
+        :show-hour="false"
+      />
+
+      <!-- 年月日数字框：清晰边框 + 墨金主题色，便于桌面精调 -->
+      <div class="ymd-row" role="group" aria-label="年月日数字">
+        <label class="ymd-field">
+          <span class="ymd-lab">年</span>
+          <input
+            v-model.number="year"
+            class="ymd-input"
+            type="number"
+            min="1900"
+            max="2100"
+            inputmode="numeric"
+            @change="onDatePartsChange"
+          />
+        </label>
+        <label class="ymd-field">
+          <span class="ymd-lab">月</span>
+          <input
+            v-model.number="month"
+            class="ymd-input"
+            type="number"
+            min="1"
+            max="12"
+            inputmode="numeric"
+            @change="onDatePartsChange"
+          />
+        </label>
+        <label class="ymd-field">
+          <span class="ymd-lab">日</span>
+          <input
+            v-model.number="day"
+            class="ymd-input"
+            type="number"
+            min="1"
+            max="31"
+            inputmode="numeric"
+            @change="onDatePartsChange"
+          />
+        </label>
+        <button type="button" class="btn-primary ymd-run" @click="run">查黄历</button>
+      </div>
+
+      <p v-if="latitude != null" class="geo">
+        定位 {{ latitude.toFixed(5) }}, {{ longitude?.toFixed(5) }}
+        <template v-if="accuracy != null"> · 精度约 {{ Math.round(accuracy) }} 米</template>
+      </p>
+      <p v-if="errMsg" class="err">{{ errMsg }}</p>
+    </section>
 
     <!-- 按事项择吉 -->
-    <section class="zeji panel">
-      <h2 class="zeji-title">按事项择吉</h2>
-      <p class="zeji-lead">从当前选中日起向后扫描，筛出「宜」含该事项的日子（教学参考，勿作唯一决策）。</p>
+    <section class="block zeji">
+      <header class="block-head">
+        <h2 class="block-title">按事项择吉</h2>
+        <p class="block-lead">从当前日起向后扫描，「宜」含该事项的日子（教学参考，勿作唯一决策）。</p>
+      </header>
       <div class="zeji-row">
-        <label>
-          事项
-          <select v-model="zejiMatterId">
+        <label class="ctrl-field">
+          <span class="ctrl-lab">事项</span>
+          <select v-model="zejiMatterId" class="ctrl">
             <option v-for="m in zejiOptions" :key="m.id" :value="m.id">{{ m.label }}</option>
           </select>
         </label>
-        <label>
-          向后天数
-          <input v-model.number="zejiDays" type="number" min="7" max="120" />
+        <label class="ctrl-field">
+          <span class="ctrl-lab">向后天数</span>
+          <input v-model.number="zejiDays" class="ctrl" type="number" min="7" max="120" />
         </label>
-        <button type="button" class="primary" @click="runZeJi">筛吉日</button>
+        <button type="button" class="btn-primary" @click="runZeJi">筛吉日</button>
       </div>
       <ul v-if="zejiHits.length" class="zeji-list">
         <li v-for="h in zejiHits" :key="h.solarLabel">
@@ -283,6 +341,10 @@ onActivated(() => {
         <p class="plain-eyebrow">白话解读</p>
         <h2 class="plain-head">{{ plain.headline }}</h2>
         <p class="plain-vibe">{{ plain.vibe }}</p>
+
+        <div v-if="festivalTags.length" class="fest-row" aria-label="节日">
+          <span v-for="f in festivalTags" :key="f" class="fest-chip">{{ f }}</span>
+        </div>
 
         <div class="plain-yi-ji">
           <div class="pbox yi">
@@ -410,85 +472,326 @@ onActivated(() => {
         <blockquote v-if="result.xiuSong" class="song">{{ result.xiuSong }}</blockquote>
       </details>
     </section>
-  </div>
+  </section>
 </template>
 
 <style scoped>
-.head h1 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 2rem;
+.huangli {
+  max-width: 920px;
 }
-.head p {
-  color: var(--ink-soft);
+
+/* —— 页头 —— */
+.page-head {
+  margin-bottom: 20px;
 }
-.pick-panel {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
-  gap: 18px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--surface);
-  align-items: start;
-}
-@media (max-width: 860px) {
-  .pick-panel {
-    grid-template-columns: 1fr;
-  }
-}
-.cal-label {
+.eyebrow {
   margin: 0 0 8px;
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  color: var(--teal);
+  font-weight: 700;
+}
+.page-head h1 {
+  margin: 0;
+  font-family: var(--font-brand);
+  font-size: clamp(2rem, 5vw, 2.7rem);
+  letter-spacing: 0.1em;
+}
+.lead {
+  margin: 12px 0 0;
+  color: var(--ink-soft);
+  line-height: 1.7;
+  max-width: 42em;
+}
+
+/* —— 日期英雄区：全宽、不嵌套滚动 —— */
+.date-hero {
+  display: grid;
+  gap: 14px;
+  padding: 18px 18px 16px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--gold) 32%, var(--line));
+  background:
+    radial-gradient(ellipse 75% 70% at 0% 0%, color-mix(in srgb, var(--teal) 12%, transparent), transparent 55%),
+    radial-gradient(ellipse 50% 60% at 100% 100%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 50%),
+    var(--surface-solid);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.date-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.date-kicker {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
   color: var(--muted);
   font-weight: 600;
 }
-.huangli-cal {
-  width: 100%;
+.date-big {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  line-height: 1.3;
 }
-.parts-row {
+.date-sub {
+  margin: 6px 0 0;
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.date-hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
 }
-.parts-actions {
+
+/* BirthDatePicker 融入英雄区：避免双层卡片套娃，鼓轮列内滚动保留 */
+.date-hero :deep(.birth-date) {
+  padding: 4px 0 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.date-hero :deep(.drum) {
+  /* 鼓轮区略抬高，桌面/手机都一眼能点满列，无需再缩进小卡片 */
+  min-height: 168px;
+}
+.date-hero :deep(.wheel) {
+  height: 168px;
+}
+@media (max-width: 520px) {
+  .date-hero :deep(.wheel) {
+    height: 148px;
+  }
+}
+
+/* 年月日数字框：明确边框 + 主题色聚焦 */
+.ymd-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 10px;
-  margin-top: 14px;
 }
-label {
+.ymd-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.85rem;
+  gap: 5px;
+  flex: 1 1 5.5rem;
+  min-width: 5rem;
+  max-width: 8rem;
 }
-input {
-  min-width: 4.5rem;
-  padding: 6px 8px;
+.ymd-lab {
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  font-weight: 600;
 }
-.geo {
+.ymd-input {
   width: 100%;
-  margin: 10px 0 0;
+  min-height: var(--touch-min);
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1.5px solid color-mix(in srgb, var(--gold) 40%, var(--line));
+  background: var(--input-bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+.ymd-input:hover {
+  border-color: color-mix(in srgb, var(--teal) 45%, var(--line));
+}
+.ymd-input:focus {
+  border-color: var(--teal);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--teal) 22%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--gold) 25%, transparent);
+  background: color-mix(in srgb, var(--teal) 5%, var(--input-bg));
+}
+.ymd-run {
+  flex: 0 0 auto;
+  min-height: var(--touch-min);
+}
+
+/* 按钮 */
+.btn-primary,
+.btn-ghost {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  font: inherit;
+  min-height: var(--touch-min);
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.12s ease;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--teal), color-mix(in srgb, var(--teal) 72%, var(--gold)));
+  color: var(--on-accent);
+  border-color: transparent;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--teal) 28%, transparent);
+}
+.btn-primary:hover {
+  filter: brightness(1.05);
+}
+.btn-primary:active {
+  transform: translateY(1px);
+}
+.btn-ghost {
+  background: color-mix(in srgb, var(--surface-strong) 80%, transparent);
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--gold) 28%, var(--line));
+}
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+.btn-ghost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.geo {
+  margin: 0;
   font-size: 0.85rem;
   color: var(--ink-soft);
 }
 .err {
-  width: 100%;
+  margin: 0;
   color: var(--seal);
-  margin: 8px 0 0;
+  font-size: 0.9rem;
 }
-.plain-card {
+
+/* —— 通用区块 —— */
+.block {
   margin-top: 18px;
-  padding: 18px 18px 14px;
+  padding: 16px 18px;
   border-radius: 16px;
   border: 1px solid var(--line);
+  background: var(--surface-solid);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--ink) 5%, transparent);
+}
+.block-head {
+  margin-bottom: 12px;
+}
+.block-title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+}
+.block-lead {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.ctrl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.85rem;
+}
+.ctrl-lab {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.ctrl {
+  min-height: var(--touch-min);
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1.5px solid color-mix(in srgb, var(--gold) 36%, var(--line));
+  background: var(--input-bg);
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+.ctrl:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 20%, transparent);
+}
+
+.zeji-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+.zeji-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.zeji-hit {
+  width: 100%;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.zeji-hit:hover {
+  border-color: color-mix(in srgb, var(--teal) 40%, var(--line));
+  background: color-mix(in srgb, var(--teal) 6%, var(--surface-strong));
+}
+.zeji-date {
+  font-weight: 700;
+  color: var(--teal);
+  letter-spacing: 0.04em;
+}
+.zeji-meta,
+.zeji-plain {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+.zeji-yi {
+  font-size: 0.85rem;
+}
+.zeji-empty {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+/* —— 白话结果 —— */
+.plain-card {
+  margin-top: 18px;
+  padding: 20px 18px 16px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--gold) 26%, var(--line));
   background:
-    linear-gradient(160deg, color-mix(in srgb, var(--teal) 10%, transparent), transparent 45%),
+    linear-gradient(160deg, color-mix(in srgb, var(--teal) 11%, transparent), transparent 48%),
     var(--surface-solid);
-  box-shadow: var(--shadow);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 6%, transparent);
 }
 .plain-eyebrow {
   margin: 0 0 6px;
@@ -505,9 +808,26 @@ input {
   line-height: 1.35;
 }
 .plain-vibe {
-  margin: 10px 0 16px;
+  margin: 10px 0 14px;
   color: var(--ink-soft);
   line-height: 1.65;
+}
+.fest-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.fest-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: var(--seal);
+  border: 1px solid color-mix(in srgb, var(--seal) 35%, var(--line));
+  background: color-mix(in srgb, var(--seal) 8%, transparent);
 }
 .plain-yi-ji {
   display: grid;
@@ -518,24 +838,39 @@ input {
   .plain-yi-ji {
     grid-template-columns: 1fr;
   }
+  .ymd-field {
+    max-width: none;
+    flex: 1 1 calc(33.33% - 10px);
+  }
+  .ymd-run {
+    flex: 1 1 100%;
+  }
 }
 .pbox {
-  padding: 12px 14px;
-  border-radius: 12px;
+  padding: 14px 14px 12px;
+  border-radius: 14px;
   border: 1px solid var(--line);
   background: var(--surface-strong);
 }
 .pbox.yi {
-  border-color: color-mix(in srgb, var(--teal) 35%, var(--line));
-  background: color-mix(in srgb, var(--teal) 8%, var(--surface-strong));
+  border-color: color-mix(in srgb, var(--teal) 38%, var(--line));
+  background: color-mix(in srgb, var(--teal) 9%, var(--surface-strong));
 }
 .pbox.ji {
-  border-color: color-mix(in srgb, var(--seal) 30%, var(--line));
-  background: color-mix(in srgb, var(--seal) 7%, var(--surface-strong));
+  border-color: color-mix(in srgb, var(--seal) 32%, var(--line));
+  background: color-mix(in srgb, var(--seal) 8%, var(--surface-strong));
 }
 .pbox h3 {
-  margin: 0 0 8px;
-  font-size: 0.95rem;
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  letter-spacing: 0.06em;
+}
+.pbox.yi h3 {
+  color: var(--teal);
+}
+.pbox.ji h3 {
+  color: var(--seal);
 }
 .pbox ul {
   margin: 0;
@@ -564,13 +899,13 @@ input {
 .plain-kv {
   margin: 14px 0 0;
   display: grid;
-  gap: 10px;
+  gap: 0;
 }
 .plain-kv > div {
   display: grid;
   grid-template-columns: 3.2rem 1fr;
   gap: 10px;
-  padding: 8px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--line);
 }
 .plain-kv dt {
@@ -590,11 +925,13 @@ input {
   color: var(--muted);
   line-height: 1.5;
 }
+
+/* —— 传统原文 —— */
 .classic {
   margin-top: 16px;
-  padding: 12px 14px;
-  border: 1px dashed var(--line);
-  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px dashed color-mix(in srgb, var(--gold) 30%, var(--line));
+  border-radius: 16px;
   background: color-mix(in srgb, var(--surface) 70%, transparent);
 }
 .classic summary {
@@ -607,13 +944,21 @@ input {
 .classic summary::-webkit-details-marker {
   display: none;
 }
+.classic summary::before {
+  content: '▸ ';
+  color: var(--gold);
+}
 .classic[open] summary {
   margin-bottom: 12px;
   color: var(--ink);
 }
+.classic[open] summary::before {
+  content: '▾ ';
+}
 .classic h3 {
   margin: 0 0 6px;
   font-size: 1.05rem;
+  font-family: var(--font-display);
 }
 .meta,
 .gz {
@@ -632,23 +977,26 @@ input {
   }
 }
 .box {
-  padding: 12px;
+  padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid var(--line);
 }
 .box.yi {
   background: color-mix(in srgb, var(--teal) 10%, transparent);
+  border-color: color-mix(in srgb, var(--teal) 28%, var(--line));
 }
 .box.ji {
   background: color-mix(in srgb, var(--seal) 8%, transparent);
+  border-color: color-mix(in srgb, var(--seal) 26%, var(--line));
 }
 .box h4 {
   margin: 0 0 6px;
   font-size: 1rem;
+  font-family: var(--font-display);
 }
 .kv {
   display: grid;
-  gap: 10px;
+  gap: 0;
 }
 .kv > div {
   display: grid;
@@ -667,123 +1015,11 @@ input {
 }
 .song {
   margin: 16px 0 0;
-  padding: 12px;
-  border-left: 3px solid var(--accent, #8b5a2b);
+  padding: 12px 14px;
+  border-left: 3px solid var(--gold);
+  border-radius: 0 10px 10px 0;
   color: var(--ink-soft);
   line-height: 1.6;
-}
-button.primary,
-button.ghost {
-  padding: 8px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  cursor: pointer;
-}
-button.primary {
-  background: var(--teal);
-  color: var(--on-accent);
-  border-color: transparent;
-}
-button.ghost {
-  background: transparent;
-}
-.zeji {
-  margin-top: 16px;
-}
-.zeji-title {
-  margin: 0 0 6px;
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-}
-.zeji-lead {
-  margin: 0 0 12px;
-  color: var(--ink-soft);
-  font-size: 0.88rem;
-  line-height: 1.55;
-}
-.zeji-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: flex-end;
-  margin-bottom: 12px;
-}
-.zeji-row label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 0.85rem;
-}
-.zeji-row select,
-.zeji-row input {
-  min-height: var(--touch-min);
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--input-bg);
-  color: var(--ink);
-}
-.zeji-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-.zeji-hit {
-  width: 100%;
-  display: grid;
-  gap: 2px;
-  text-align: left;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--surface-strong);
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-}
-.zeji-hit:hover {
-  border-color: color-mix(in srgb, var(--teal) 40%, var(--line));
-}
-.zeji-date {
-  font-weight: 700;
-  color: var(--teal);
-}
-.zeji-meta,
-.zeji-plain {
-  font-size: 0.82rem;
-  color: var(--ink-soft);
-}
-.zeji-yi {
-  font-size: 0.85rem;
-}
-.zeji-empty {
-  margin: 0;
-  font-size: 0.88rem;
-}
-</style>
-
-<style>
-/* DatePicker 内联面板贴合主题 */
-.huangli-cal.p-datepicker {
-  width: 100%;
-}
-.huangli-cal .p-datepicker-panel {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--surface-solid);
-  color: var(--ink);
-  box-shadow: none;
-  width: 100%;
-}
-.huangli-cal .p-datepicker-header {
-  background: color-mix(in srgb, var(--teal) 8%, var(--surface-solid));
-  color: var(--ink);
-  border-bottom: 1px solid var(--line);
-}
-.huangli-cal .p-datepicker-day.p-datepicker-day-selected {
-  background: var(--teal);
-  color: var(--on-accent);
+  background: color-mix(in srgb, var(--gold) 6%, transparent);
 }
 </style>

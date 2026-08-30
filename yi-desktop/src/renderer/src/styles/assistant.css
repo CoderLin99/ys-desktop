@@ -298,7 +298,7 @@ html[data-theme='dark'] .ai-assist-mask {
 .ai-assist .consult-log p,
 .ai-assist .consult-log .md-body {
   margin: 0;
-  white-space: pre-wrap;
+  white-space: normal;
   line-height: 1.65;
   word-break: break-word;
   flex: 1;
@@ -439,29 +439,81 @@ html[data-theme='dark'] .ai-assist .think-box {
   cursor: not-allowed;
 }
 
-.ai-assist .md-body :deep(strong) {
-  color: var(--ink);
+.ai-assist .md-body {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.65;
+}
+
+.ai-assist .consult-log .md-body {
+  margin: 0;
+}
+
+.ai-assist .md-body strong,
+.ai-assist .md-body .md-em {
+  color: var(--teal);
   font-weight: 700;
+  background: color-mix(in srgb, var(--teal) 12%, transparent);
+  padding: 0 0.2em;
+  border-radius: 4px;
+}
+
+/* 模块标题：色条 + 底衬，与正文明显区分（全局 CSS 勿写 :deep） */
+.ai-assist .md-body .md-h2 {
+  display: block;
+  margin: 0.75em 0 0.28em;
+  padding: 0.32em 0.65em;
+  border-left: 4px solid var(--teal);
+  border-radius: 0 10px 10px 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--teal) 18%, var(--surface-solid)),
+    color-mix(in srgb, var(--teal) 6%, transparent)
+  );
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.35;
+}
+
+.ai-assist .md-body .md-h2:first-child {
+  margin-top: 0;
 }
 
 @media (max-width: 900px) {
   .ai-fab {
-    right: max(12px, env(safe-area-inset-right, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
     left: auto;
     bottom: calc(var(--fab-stack-bottom) + env(safe-area-inset-bottom, 0px));
+    /* 低于「更多」抽屉，避免挡导航 */
+    z-index: 52;
   }
 
+  /* 底栏抽屉：落在 Tab 之上，不盖住底栏；高度避开顶栏 */
   .ai-assist {
     left: 0 !important;
     right: 0 !important;
     top: auto !important;
-    bottom: 0 !important;
+    bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px)) !important;
     width: 100vw !important;
     max-width: 100vw !important;
-    height: min(78dvh, 640px) !important;
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 48px) !important;
+    height: auto !important;
+    max-height: calc(
+      100dvh - var(--topbar-height, 48px) - var(--tab-bar-height) - env(safe-area-inset-top, 0px) -
+        env(safe-area-inset-bottom, 0px) - 8px
+    ) !important;
+    min-height: min(52dvh, 420px);
     border-radius: 16px 16px 0 0;
     transform: none !important;
+    z-index: 57;
+  }
+
+  .ai-assist-mask {
+    /* 遮罩止于 Tab 顶，仍可点底栏切换 */
+    bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px));
+    z-index: 56;
   }
 
   .ai-assist-head {
@@ -470,10 +522,24 @@ html[data-theme='dark'] .ai-assist .think-box {
   }
 
   .ai-assist-body {
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 12px;
   }
 
   .ai-assist .consult-log {
-    max-height: min(36dvh, 320px);
+    max-height: min(32dvh, 280px);
+  }
+
+  .ai-assist .ai-form {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-assist-head {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ai-assist-tools {
+    width: 100%;
+    justify-content: flex-end;
   }
 }

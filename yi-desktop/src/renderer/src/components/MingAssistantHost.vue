@@ -431,7 +431,7 @@ onBeforeUnmount(() => {
           <ul ref="listEl" class="consult-log">
             <li v-for="(m, i) in messages" :key="i" :class="m.role">
               <span class="who">{{ m.role === 'user' ? '问' : '断' }}</span>
-              <p
+              <div
                 class="md-body"
                 v-html="m.role === 'assistant' ? mdHtml(m.text, true) : mdHtml(m.text)"
               />
@@ -448,7 +448,7 @@ onBeforeUnmount(() => {
             </li>
             <li v-else-if="stream" class="assistant">
               <span class="who">断</span>
-              <p class="md-body" v-html="mdHtml(stream, true)" />
+              <div class="md-body" v-html="mdHtml(stream, true)" />
             </li>
           </ul>
           <form class="consult-form" @submit.prevent="ask">

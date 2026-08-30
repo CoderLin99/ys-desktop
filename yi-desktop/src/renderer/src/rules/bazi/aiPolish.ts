@@ -1239,10 +1239,14 @@ export function buildMingConsultFacts(facts: {
   name: string
   genderLabel: string
   pillars: string
+  /** 四柱天干十神（已由规则算出，禁止模型改名） */
+  pillarShiShen?: string
   dayMaster: string
   strength: string
   useful: string
   avoid: string
+  /** 喜用取用依据摘要 */
+  usefulBasis?: string
   qiYun: string
   daYun: string
   headline: string
@@ -1255,8 +1259,10 @@ export function buildMingConsultFacts(facts: {
   return [
     `姓名 ${facts.name} · ${facts.genderLabel}`,
     `四柱 ${facts.pillars}`,
+    facts.pillarShiShen?.trim() ? `十神（规则已算，禁止改名） ${facts.pillarShiShen.trim()}` : '',
     `日主 ${facts.dayMaster} · 强弱 ${facts.strength}`,
     `用神 ${facts.useful} · 忌神 ${facts.avoid}`,
+    facts.usefulBasis?.trim() ? `喜用依据 ${facts.usefulBasis.trim()}` : '',
     `起运 ${facts.qiYun}`,
     `大运 ${facts.daYun}`,
     facts.selectedYun?.trim() ? `【点选岁运】\n${facts.selectedYun.trim()}` : '',
@@ -1319,6 +1325,7 @@ export async function askMingAgent(
         plainTalkGlossaryGuide(),
         /** 盘面追问：同名神煞多柱叠见原则 */
         shenShaStackPromptGuide(),
+        '【硬约束·盘面】四柱十神、用神/忌神五行必须以「已就绪事实」为准；禁止把伤官说成食神、正官说成七杀等对调或改名；禁止另算一套喜用覆盖事实包。',
         '可用加粗强调关键词；情缘段数只许用少/中/多波折。',
         '回答必须吉凶并陈，禁止只说好的。',
         modernYinStudyPromptGuide(),

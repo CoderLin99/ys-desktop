@@ -5,7 +5,6 @@
 import { computed, defineAsyncComponent, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import SelectButton from 'primevue/selectbutton'
-import Select from 'primevue/select'
 import {
   buildBaZi,
   buildBaZiFromPillars,
@@ -54,16 +53,17 @@ import {
 } from '@rules/bazi/calendar'
 import {
   adjustToSolarTime,
-  BIRTH_PLACE_SCOPE_OPTIONS,
   BIRTH_PLACES,
   CUSTOM_PLACE_KEY,
+  birthPlaceId,
   birthPlaceScopeOf,
-  formatPlaceLabel,
+  findBirthPlaceById,
   placesByScope,
   shiftSolarDate,
   utcOffsetOf,
   type BirthPlaceScope
 } from '@rules/bazi/solarTime'
+import BirthPlacePicker from '../components/BirthPlacePicker.vue'
 import {
   MING_AGENT_OPTIONS,
   askMingAgent,
@@ -121,8 +121,10 @@ const hourUnknown = ref(false)
 const gender = ref<'male' | 'female'>('male')
 /** 出生地范围：国内 / 国外 */
 const placeScope = ref<BirthPlaceScope>('cn')
-/** 出生地（经度校正）；CUSTOM_PLACE_KEY = 自定义经度 */
-const placeName = ref('北京')
+/** 出生地稳定 id；兼容旧命例纯市名 */
+const placeName = ref(
+  birthPlaceId(BIRTH_PLACES.find((p) => p.name === '北京' && !p.city) ?? BIRTH_PLACES[0])
+)
 /** 自定义东经（西经填负数） */
 const customLongitude = ref(116.4)
 
@@ -142,27 +144,17 @@ const resultTabOptions = [
   { label: '基本排盘', value: 'basic' },
   { label: '大运流年', value: 'pro' }
 ]
-/** 国内/国外切换 */
-const placeScopeOptions = BIRTH_PLACE_SCOPE_OPTIONS
-/**
- * 当前范围下的城市列表（含自定义经度）。
- */
-const placeSelectOptions = computed(() => [
-  { label: '自定义经度…', value: CUSTOM_PLACE_KEY },
-  ...placesByScope(placeScope.value).map((p) => ({
-    label: formatPlaceLabel(p),
-    value: p.name
-  }))
-])
 
 /**
- * 切换国内/国外后：若当前城市不在该范围，落到该范围首城。
+ * 切换国内/国外后：若当前不在该范围，落到该范围首个市本级。
  */
 watch(placeScope, (scope) => {
   if (placeName.value === CUSTOM_PLACE_KEY) return
-  const list = placesByScope(scope)
-  const still = list.some((p) => p.name === placeName.value)
-  if (!still) placeName.value = list[0]?.name ?? CUSTOM_PLACE_KEY
+  const hit = findBirthPlaceById(placeName.value, scope)
+  if (!hit) {
+    const first = placesByScope(scope).find((p) => !p.city) ?? placesByScope(scope)[0]
+    placeName.value = first ? birthPlaceId(first) : CUSTOM_PLACE_KEY
+  }
 })
 /** 是否叠加均时差（真太阳时） */
 const useEot = ref(true)
@@ -170,9 +162,9 @@ const useEot = ref(true)
 const daylightSaving = ref(false)
 /** 日柱换日口径：子初 / 晚子不换 */
 const dayCutover = ref<DayCutover>('ziZheng')
-/** 换日口径选项 */
+/** 换日口径选项（文案偏引导，避免断语口吻） */
 const dayCutoverOptions = DAY_CUTOVER_OPTIONS.map((o) => ({
-  label: o.label,
+  label: o.value === 'ziChu' ? '子初口径' : '晚子口径',
   value: o.value
 }))
 const assertTone = ref<AssertionTone>('ming')
@@ -769,20 +761,24 @@ const currentPlace = computed(() => {
     }
   }
   return (
-    BIRTH_PLACES.find((p) => p.name === placeName.value) ??
-    placesByScope(placeScope.value)[0] ??
+    findBirthPlaceById(placeName.value, placeScope.value) ??
+    findBirthPlaceById(placeName.value) ??
+    placesByScope(placeScope.value).find((p) => !p.city) ??
     BIRTH_PLACES[0]
   )
 })
 
 /**
  * 从已选地点同步范围（例如载入命例后）。
- * @param name 城市名
+ * @param id 地点 id 或旧版市名
  */
-function syncPlaceScopeFromName(name: string): void {
-  if (name === CUSTOM_PLACE_KEY) return
-  const hit = BIRTH_PLACES.find((p) => p.name === name)
-  if (hit) placeScope.value = birthPlaceScopeOf(hit)
+function syncPlaceScopeFromName(id: string): void {
+  if (id === CUSTOM_PLACE_KEY) return
+  const hit = findBirthPlaceById(id)
+  if (hit) {
+    placeScope.value = birthPlaceScopeOf(hit)
+    placeName.value = birthPlaceId(hit)
+  }
 }
 
 /** 农历月下拉 */
@@ -925,7 +921,7 @@ function applyProfile(id: string | null): void {
   minute.value = p.minute ?? 0
   if (p.placeScope) placeScope.value = p.placeScope
   if (p.placeName) {
-    placeName.value = p.placeName
+    syncPlaceScopeFromName(p.placeName)
     if (p.placeName === CUSTOM_PLACE_KEY && typeof p.placeLongitude === 'number') {
       customLongitude.value = p.placeLongitude
     }
@@ -1284,10 +1280,18 @@ const mingConsultFacts = computed(() => {
     name: detail.value.name,
     genderLabel: detail.value.genderLabel,
     pillars,
+    /** 年/月/日/时天干十神，钉死模型不许改名 */
+    pillarShiShen: [
+      `年${p.year.gz}${p.year.ganShiShen}`,
+      `月${p.month.gz}${p.month.ganShiShen}`,
+      `日${p.day.gz}日主`,
+      p.hour ? `时${p.hour.gz}${p.hour.ganShiShen}` : '时未知'
+    ].join(' · '),
     dayMaster: `${chart.value.dayMaster}（${chart.value.dayMasterWuXing}）`,
     strength: `${assertion.value.structured.strength}`,
     useful: assertion.value.structured.useful.join('、'),
     avoid: assertion.value.structured.avoid.join('、'),
+    usefulBasis: trendPack.value?.usefulEvidence?.basis ?? '',
     qiYun: detail.value.qiYun,
     daYun: detail.value.daYun.map((d) => `${d.ageFrom}岁${d.gz}`).join('、'),
     headline: assertion.value.headline,
@@ -1455,7 +1459,7 @@ run()
     <header class="head" id="bazi-top">
       <h1>八字排盘</h1>
       <p>
-        支持公历 / 农历 / 手工四柱；可选出生地经度与均时差做真太阳时校正（教学近似）。
+        可先填写公历、农历或手工四柱；出生地与真太阳时用于更贴近当地时刻的校正（教学近似，供参考）。
       </p>
     </header>
 
@@ -1484,30 +1488,36 @@ run()
 
       <div class="profile-bar">
         <label class="profile-pick">
-          套用命例
+          已存命例
           <select
             :value="activeProfileId ?? ''"
             @change="
               applyProfile(($event.target as HTMLSelectElement).value || null)
             "
           >
-            <option value="">手填 / 不套用</option>
+            <option value="">自行填写</option>
             <option v-for="p in profiles" :key="p.id" :value="p.id">{{ p.label }}</option>
           </select>
         </label>
       </div>
 
       <form class="form" @submit.prevent="run(true)">
+        <!-- 第一行：姓名 / 解读风格 / 性别 -->
         <label>
           姓名
-          <input v-model="personName" class="w-name" maxlength="20" />
+          <input
+            v-model="personName"
+            class="w-name"
+            maxlength="20"
+            placeholder="选填，便于保存命例"
+          />
         </label>
         <label>
-          断言口吻
+          解读风格
           <select v-model="assertTone" class="w-tone" @change="() => run()">
-            <option value="ming">命理总断</option>
+            <option value="ming">命理综述</option>
             <option value="study">学习复盘</option>
-            <option value="fun">娱乐戏说</option>
+            <option value="fun">轻松闲谈</option>
           </select>
         </label>
         <div class="pv-field">
@@ -1542,6 +1552,7 @@ run()
           </label>
         </template>
         <template v-if="mode === 'solar' || mode === 'lunar'">
+          <!-- 时分单独占位，出生地整行下沉，避免与时辰挤在同一行错位 -->
           <label>
             时
             <input v-model.number="hour" type="number" min="0" max="23" :disabled="hourUnknown" />
@@ -1550,60 +1561,48 @@ run()
             分
             <input v-model.number="minute" type="number" min="0" max="59" :disabled="hourUnknown" />
           </label>
-          <div class="pv-field pv-place-scope">
-            <span class="field-label">出生地</span>
-            <SelectButton
-              v-model="placeScope"
-              :options="placeScopeOptions"
-              optionLabel="label"
-              optionValue="value"
-              :allowEmpty="false"
-              aria-label="国内或国外"
-            />
+          <div class="form-place-block">
+            <div class="pv-field pv-place">
+              <span class="field-label">出生地</span>
+              <p class="field-hint">用于真太阳时校正，可按省市区选择或自定义经度</p>
+              <BirthPlacePicker v-model="placeName" v-model:scope="placeScope" />
+            </div>
+            <label v-if="placeName === CUSTOM_PLACE_KEY">
+              东经°
+              <input
+                v-model.number="customLongitude"
+                class="w-lng"
+                type="number"
+                min="-180"
+                max="180"
+                step="0.01"
+                title="东经填正数，西经填负数"
+                placeholder="如 116.4"
+              />
+            </label>
           </div>
-          <div class="pv-field pv-place">
-            <span class="field-label">{{ placeScope === 'cn' ? '省/市' : '国家/城市' }}</span>
-            <Select
-              v-model="placeName"
-              :options="placeSelectOptions"
-              optionLabel="label"
-              optionValue="value"
-              filter
-              :filterPlaceholder="placeScope === 'cn' ? '输入省/市筛选' : '输入国家/城市筛选'"
-              placeholder="选择地区"
-              :filterFields="['label']"
-              appendTo="body"
-              @update:modelValue="syncPlaceScopeFromName"
-            />
-          </div>
-          <label v-if="placeName === CUSTOM_PLACE_KEY">
-            东经°
-            <input
-              v-model.number="customLongitude"
-              class="w-lng"
-              type="number"
-              min="-180"
-              max="180"
-              step="0.01"
-              title="东经为正，西经为负"
-            />
-          </label>
           <!-- 勾选项单独成行，避免和年月日挤在一起 -->
           <div class="form-checks">
             <label class="check">
               <input v-model="hourUnknown" type="checkbox" />
-              时辰未知
+              时辰暂不清楚
             </label>
-            <label class="check" title="有时辰时才生效：经度差(相对当地时区) + 均时差">
+            <label
+              class="check"
+              title="有明确时辰时可勾选：按出生地经度差与均时差做校正"
+            >
               <input v-model="useEot" type="checkbox" :disabled="hourUnknown" />
-              真太阳时
+              参考真太阳时
             </label>
-            <label class="check" title="有时辰时才生效；国外请按当地当年是否夏令时勾选">
+            <label
+              class="check"
+              title="有明确时辰时可勾选；国外可按当地当年是否实行夏令时选择"
+            >
               <input v-model="daylightSaving" type="checkbox" :disabled="hourUnknown" />
-              夏令时
+              当时实行夏令时
             </label>
           </div>
-          <div class="pv-field">
+          <div class="pv-field pv-cutover">
             <span class="field-label">日柱换日</span>
             <SelectButton
               v-model="dayCutover"
@@ -1615,7 +1614,9 @@ run()
               @update:model-value="() => mode !== 'manual' && run()"
             />
             <span class="soft cutover-hint">{{
-              dayCutover === 'ziChu' ? '23:00 起日柱算次日' : '至 00:00 才换日柱'
+              dayCutover === 'ziChu'
+                ? '按子初：约 23:00 起可视为次日日柱'
+                : '按子正：到次日 00:00 再换日柱'
             }}</span>
           </div>
         </template>
@@ -1623,7 +1624,15 @@ run()
           <label>年柱 <input v-model="manualYear" class="w-pillar" maxlength="2" /></label>
           <label>月柱 <input v-model="manualMonth" class="w-pillar" maxlength="2" /></label>
           <label>日柱 <input v-model="manualDay" class="w-pillar" maxlength="2" /></label>
-          <label>时柱 <input v-model="manualHour" class="w-pillar" maxlength="2" placeholder="留空=未知" /></label>
+          <label>
+            时柱
+            <input
+              v-model="manualHour"
+              class="w-pillar"
+              maxlength="2"
+              placeholder="可不填"
+            />
+          </label>
         </template>
         <div class="form-actions">
           <button class="submit" type="submit">排盘</button>
@@ -1755,32 +1764,36 @@ run()
                 <span v-else class="muted">未知</span>
               </td>
             </tr>
-            <tr>
+            <tr class="cg-row">
               <th>藏干</th>
               <td v-for="p in detail.pillars" :key="'c' + p.label">
-                <template v-if="p.canggan.length">
+                <div v-if="p.canggan.length" class="cg-stack">
                   <div v-for="c in p.canggan" :key="c.gan + c.shiShen" class="cg">
-                    <WxGlyph :wx="ganWuXing(c.gan)" :size="12" />
-                    <span :style="{ color: colorGan(c.gan) }">{{ c.gan }}</span>
+                    <span class="cg-main">
+                      <WxGlyph :wx="ganWuXing(c.gan)" :size="12" />
+                      <span :style="{ color: colorGan(c.gan) }">{{ c.gan }}</span>
+                    </span>
                     <span class="cg-role">{{ c.role }}</span>
                   </div>
-                </template>
+                </div>
                 <span v-else class="muted">—</span>
               </td>
             </tr>
-            <tr>
+            <tr class="sub-row">
               <th>副星</th>
               <td v-for="p in detail.pillars" :key="'s' + p.label">
-                <button
-                  v-for="(s, i) in p.subStars"
-                  :key="i"
-                  type="button"
-                  class="metric-link cg"
-                  @click="openShiShenOfGan(p.canggan[i]?.gan, $event)"
-                >
-                  {{ s }}
-                </button>
-                <span v-if="!p.subStars.length" class="muted">—</span>
+                <div v-if="p.subStars.length" class="cg-stack">
+                  <button
+                    v-for="(s, i) in p.subStars"
+                    :key="i"
+                    type="button"
+                    class="metric-link cg"
+                    @click="openShiShenOfGan(p.canggan[i]?.gan, $event)"
+                  >
+                    {{ s }}
+                  </button>
+                </div>
+                <span v-else class="muted">—</span>
               </td>
             </tr>
             <tr>
@@ -2284,16 +2297,16 @@ run()
               <div v-else-if="!aiLoading && aiShowMode === 'plain' && polishLayers.sections.some((s) => s.plain)" class="ai-layers">
                 <article v-for="sec in polishLayers.sections.filter((s) => s.plain)" :key="'p' + sec.title" class="ai-sec">
                   <h3>{{ sec.title }}</h3>
-                  <p class="md-body" v-html="mdHtml(sec.plain, true)" />
+                  <div class="md-body" v-html="mdHtml(sec.plain, true)" />
                 </article>
               </div>
               <div v-else-if="!aiLoading && aiShowMode === 'jargon' && polishLayers.sections.some((s) => s.jargon)" class="ai-layers">
                 <article v-for="sec in polishLayers.sections.filter((s) => s.jargon)" :key="'j' + sec.title" class="ai-sec jargon">
                   <h3>{{ sec.title }}</h3>
-                  <p class="md-body" v-html="mdHtml(sec.jargon)" />
+                  <div class="md-body" v-html="mdHtml(sec.jargon)" />
                 </article>
               </div>
-              <p v-else class="ai-out md-body" v-html="aiOutHtml" />
+              <div v-else class="ai-out md-body" v-html="aiOutHtml" />
             </div>
 
             <div v-if="assertion" class="consult">
@@ -2311,7 +2324,7 @@ run()
               <ul class="consult-log">
                 <li v-for="(m, i) in consultMessages" :key="i" :class="m.role">
                   <span class="who">{{ m.role === 'user' ? '问' : '断' }}</span>
-                  <p class="md-body" v-html="m.role === 'assistant' ? mdHtml(m.text, true) : mdHtml(m.text)" />
+                  <div class="md-body" v-html="m.role === 'assistant' ? mdHtml(m.text, true) : mdHtml(m.text)" />
                 </li>
                 <li v-if="consultThinking" class="assistant thinking" aria-live="polite" aria-busy="true">
                   <span class="who">断</span>
@@ -2327,7 +2340,7 @@ run()
                 </li>
                 <li v-else-if="consultStream" class="assistant">
                   <span class="who">断</span>
-                  <p class="md-body" v-html="consultStreamHtml" />
+                  <div class="md-body" v-html="consultStreamHtml" />
                 </li>
               </ul>
               <form class="consult-form" @submit.prevent="runConsultAsk">
@@ -2374,12 +2387,13 @@ run()
   flex-wrap: nowrap;
   gap: 6px;
   margin: 14px 0 4px;
-  padding: 8px 0;
+  padding: 8px 2px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--paper) 92%, transparent) 55%, color-mix(in srgb, var(--paper-deep) 80%, transparent) 100%);
-  backdrop-filter: blur(6px);
+  /* 实底，避免滚动时正文透出造成「挡字」错觉 */
+  background: var(--surface-solid);
+  border-bottom: 1px solid var(--line);
 }
 .page-nav-item {
   flex: 0 0 auto;
@@ -2424,6 +2438,15 @@ run()
   width: 100%;
   min-height: 38px;
   padding: 2px 0;
+}
+/** 出生地整行：桌面/移动均落在时辰行下方，不与时/分并排 */
+.form-place-block {
+  flex: 1 1 100%;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 14px;
+  align-items: flex-end;
 }
 .form-actions {
   width: 100%;
@@ -2486,6 +2509,13 @@ run()
 .field-label {
   line-height: 1.2;
 }
+/** 出生地等字段的引导说明，中性语气 */
+.field-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
 .pv-place-scope {
   flex: 0 0 auto;
 }
@@ -2493,11 +2523,16 @@ run()
   flex-wrap: nowrap;
 }
 .pv-place {
-  min-width: min(280px, 100%);
-  flex: 1 1 240px;
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
 }
-.pv-place :deep(.p-select) {
-  min-width: 168px;
+.pv-place :deep(.place-picker) {
+  width: 100%;
+  max-width: 100%;
+}
+.pv-cutover {
+  flex: 1 1 100%;
   width: 100%;
 }
 .form > label {
@@ -2701,20 +2736,51 @@ span.gz-cell {
   color: var(--ink);
   font-size: 0.82rem;
 }
-.cg {
+.cg-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 2px 0;
+}
+.cg-main {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 4px;
+}
+.cg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   font-size: 0.82rem;
-  line-height: 1.45;
+  line-height: 1.35;
   color: var(--ink-soft);
-  margin: 2px 0;
+  margin: 0;
+  padding: 6px 4px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+.cg + .cg {
+  margin-top: 6px;
+}
+td .cg.metric-link {
+  width: 100%;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--teal) 6%, transparent);
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink-soft);
+}
+td .cg.metric-link + .cg.metric-link {
+  margin-top: 6px;
 }
 .cg-role {
   margin-left: 0;
   font-size: 0.68rem;
   color: var(--muted);
+  letter-spacing: 0.06em;
 }
 .sha-cell {
   text-align: left;
@@ -2888,12 +2954,38 @@ button.strip-item.now:not(.on) {
   line-height: 1.55;
 }
 .md-body {
-  white-space: pre-wrap;
+  white-space: normal;
   word-break: break-word;
+  line-height: 1.65;
 }
-.md-body :deep(strong) {
-  color: var(--ink);
+.md-body :deep(strong),
+.md-body :deep(.md-em) {
+  color: var(--teal);
   font-weight: 700;
+  background: color-mix(in srgb, var(--teal) 12%, transparent);
+  padding: 0 0.2em;
+  border-radius: 4px;
+}
+.md-body :deep(.md-h2) {
+  display: block;
+  margin: 0.75em 0 0.28em;
+  padding: 0.32em 0.65em;
+  border-left: 4px solid var(--teal);
+  border-radius: 0 10px 10px 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--teal) 18%, var(--surface-solid)),
+    color-mix(in srgb, var(--teal) 6%, transparent)
+  );
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.35;
+}
+.md-body :deep(.md-h2:first-child) {
+  margin-top: 0;
 }
 .strip-item strong {
   font-family: var(--font-display);
@@ -3432,10 +3524,13 @@ html[data-theme='dark'] .ai-assist-mask {
   font-size: 0.75rem;
   color: var(--teal);
 }
-.consult-log p {
+.consult-log p,
+.consult-log .md-body {
   margin: 0;
-  white-space: pre-wrap;
+  white-space: normal;
   line-height: 1.6;
+  flex: 1;
+  min-width: 0;
 }
 .consult-log .thinking .who {
   color: var(--muted);
@@ -3592,13 +3687,22 @@ html[data-theme='dark'] .ai-assist-mask {
   line-height: 1.7;
 }
 @media (max-width: 900px) {
-  /* 起盘表单：窄屏纵向满宽，避免 PC 横排挤在一起 */
+  /* 起盘表单：双列紧凑；年/月/日等同宽，避免整列过长 */
   .form {
-    flex-direction: column;
     align-items: stretch;
   }
-  .form > label {
-    width: 100%;
+  .form > label,
+  .form > .pv-field {
+    flex: 1 1 calc(50% - 8px);
+    min-width: min(100%, 132px);
+  }
+  .form > label:has(input.w-name),
+  .form > label:has(select.w-tone),
+  .form > .form-place-block,
+  .form > .form-checks,
+  .form > .form-actions,
+  .form > .pv-cutover {
+    flex: 1 1 100%;
   }
   .form input,
   .form select {
@@ -3606,8 +3710,18 @@ html[data-theme='dark'] .ai-assist-mask {
     max-width: 100%;
     box-sizing: border-box;
   }
+  .page-nav-item {
+    min-height: 36px;
+    padding: 8px 14px;
+  }
+  .section-anchor {
+    scroll-margin-top: 56px;
+  }
+  .panel {
+    padding: 14px 12px;
+  }
   .pan-table {
-    min-width: 560px;
+    min-width: 520px;
     font-size: 0.82rem;
   }
   .pan-table .gz-char {
@@ -3615,22 +3729,28 @@ html[data-theme='dark'] .ai-assist-mask {
   }
   .pillars {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
+  /* 与全局 assistant.css 对齐：抽屉落在 Tab 之上，勿再写 bottom:0 */
   .ai-fab {
-    right: max(12px, env(safe-area-inset-right, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
     left: auto;
     bottom: calc(var(--fab-stack-bottom) + env(safe-area-inset-bottom, 0px));
+    z-index: 52;
   }
-  /* App：底部抽屉铺满，避免 66vw 小窗挤字、拖拽错位 */
   .ai-assist {
     left: 0 !important;
     right: 0 !important;
     top: auto !important;
-    bottom: 0 !important;
+    bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px)) !important;
     width: 100vw !important;
     max-width: 100vw !important;
-    height: min(78dvh, 640px) !important;
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 48px) !important;
+    height: auto !important;
+    max-height: calc(
+      100dvh - var(--topbar-height, 48px) - var(--tab-bar-height) - env(safe-area-inset-top, 0px) -
+        env(safe-area-inset-bottom, 0px) - 8px
+    ) !important;
+    min-height: min(52dvh, 420px);
     border-radius: 16px 16px 0 0;
     transform: none !important;
   }
@@ -3645,7 +3765,17 @@ html[data-theme='dark'] .ai-assist-mask {
     justify-content: flex-end;
   }
   .ai-assist-body {
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .form > label,
+  .form > .pv-field {
+    flex: 1 1 100%;
+  }
+  .pillars {
+    grid-template-columns: 1fr 1fr;
   }
 }
 </style>

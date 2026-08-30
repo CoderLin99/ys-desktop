@@ -1,6 +1,6 @@
 [package]
 name = "yi-desktop"
-version = "0.1.1"
+version = "0.1.2"
 description = "易学桌面：八字与六爻（Tauri 2）"
 authors = ["Eason"]
 edition = "2021"

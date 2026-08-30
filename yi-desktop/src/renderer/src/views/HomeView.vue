@@ -315,7 +315,8 @@ h1 {
 
 @media (max-width: 560px) {
   .hero {
-    padding-bottom: 24px;
+    /* 保留全局 FAB 避让，勿压成固定 24px 导致底栏挡内容 */
+    padding-bottom: calc(var(--page-pad-bottom) + env(safe-area-inset-bottom, 0px));
   }
   .hero-logo {
     width: 56px;

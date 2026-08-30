@@ -217,6 +217,14 @@ button:disabled {
   background: var(--surface);
   transition: transform 0.25s ease, border-color 0.25s ease;
 }
+@media (max-width: 520px) {
+  .yao {
+    grid-template-columns: 24px minmax(72px, 28vw) 1fr;
+    gap: 6px;
+    padding: 8px 6px;
+    font-size: 0.88rem;
+  }
+}
 .yao.shi {
   border-left-color: var(--teal);
 }

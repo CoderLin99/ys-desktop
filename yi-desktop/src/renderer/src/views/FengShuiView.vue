@@ -7,6 +7,7 @@ import { storeToRefs } from 'pinia'
 import { analyzeFengShui, type FengShuiResult } from '@rules/fengshui/analyze'
 import { useBaziProfilesStore } from '../stores/baziProfiles'
 import { useAssistContextStore } from '../stores/assistContext'
+import ElectronicCompass from '../components/ElectronicCompass.vue'
 import {
   getCurrentPosition,
   requestCompassPermission,
@@ -197,6 +198,8 @@ loadProfile()
         <span class="hint">{{ headingLabel }}</span>
       </label>
 
+      <ElectronicCompass :heading-deg="headingDeg" :active="compassOn" :size="240" />
+
       <div class="geo-block">
         <label>
           纬度
@@ -232,8 +235,11 @@ loadProfile()
       </div>
 
       <button type="button" class="ghost" @click="toggleCompass">
-        {{ compassOn ? '关闭罗盘' : '开启罗盘' }}
+        {{ compassOn ? '关闭电子罗盘' : '开启电子罗盘（需权限）' }}
       </button>
+      <p class="geo-meta">
+        平板/手机：开启后对准房屋「门向外」方向；指针固定表示当前「向」，盘面随设备转动。桌面无传感器时可手填角度。
+      </p>
       <button type="button" class="primary" @click="run">推算</button>
       <p v-if="errMsg" class="err">{{ errMsg }}</p>
     </div>
