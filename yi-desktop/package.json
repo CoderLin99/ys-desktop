@@ -30,7 +30,9 @@
     "classics:fetch-fengshui": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/resolve-node.ps1 scripts/fetch-wenzhen-classics.mjs --fengshui",
     "classics:index": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/resolve-node.ps1 scripts/index-classics.mjs",
     "classics:build": "npm run classics:fetch && npm run classics:index",
-    "places:cn": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/resolve-node.ps1 scripts/generate-birth-places-cn.mjs"
+    "places:cn": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/resolve-node.ps1 scripts/generate-birth-places-cn.mjs",
+    "membership:check": "node scripts/membership-check.mjs",
+    "worker:deploy": "npm --prefix ../cloudflare/worker run deploy"
   },
   "dependencies": {
     "@primeuix/themes": "^1.2.3",

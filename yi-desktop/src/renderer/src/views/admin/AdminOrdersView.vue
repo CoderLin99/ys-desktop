@@ -4,9 +4,13 @@
  */
 import { onMounted, ref } from 'vue'
 import { approveOrder, listOrders, rejectOrder } from '../../services/adminApi'
+import { useAuthStore } from '../../stores/auth'
+import { orderStatusLabel } from '../../lib/orderStatus'
 import type { Database } from '../../lib/supabase'
 
 type OrderRow = Database['public']['Tables']['orders']['Row']
+
+const auth = useAuthStore()
 
 const orders = ref<OrderRow[]>([])
 const loading = ref(false)
@@ -36,6 +40,7 @@ async function load(): Promise<void> {
 async function approve(id: string): Promise<void> {
   try {
     await approveOrder(id, approveDays.value)
+    await auth.refreshProfile()
     await load()
   } catch (e) {
     err.value = e instanceof Error ? e.message : String(e)
@@ -48,10 +53,16 @@ async function reject(id: string): Promise<void> {
     await rejectOrder(id, rejectNote.value)
     rejectingId.value = null
     rejectNote.value = ''
+    await auth.refreshProfile()
     await load()
   } catch (e) {
     err.value = e instanceof Error ? e.message : String(e)
   }
+}
+
+/** 复制邮箱到剪贴板（对照支付宝备注） */
+async function copyText(text: string): Promise<void> {
+  await navigator.clipboard.writeText(text)
 }
 
 onMounted(() => void load())
@@ -80,13 +91,14 @@ onMounted(() => void load())
       <article v-for="o in orders" :key="o.id" class="card">
         <header>
           <strong>{{ o.email }}</strong>
-          <span class="badge" :class="o.status">{{ o.status }}</span>
+          <span class="badge" :class="o.status">{{ orderStatusLabel(o.status) }}</span>
         </header>
         <p class="meta">{{ new Date(o.created_at).toLocaleString('zh-CN') }}</p>
         <p v-if="o.note" class="note">{{ o.note }}</p>
         <p v-if="o.admin_note" class="admin-note">管理员：{{ o.admin_note }}</p>
         <div v-if="o.status === 'pending'" class="actions">
           <button type="button" class="primary" @click="approve(o.id)">通过 (+{{ approveDays }}天)</button>
+          <button type="button" class="ghost mini" @click="copyText(o.email)">复制邮箱</button>
           <button type="button" class="ghost" @click="rejectingId = o.id">拒绝</button>
         </div>
         <div v-if="rejectingId === o.id" class="reject-box">

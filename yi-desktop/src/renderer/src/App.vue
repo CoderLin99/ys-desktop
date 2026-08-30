@@ -20,7 +20,7 @@ const shell = useShellStore()
 const theme = useThemeStore()
 const auth = useAuthStore()
 const { moreOpen } = storeToRefs(shell)
-const { isLoggedIn, isAdmin } = storeToRefs(auth)
+const { isLoggedIn, isAdmin, adminPendingCount } = storeToRefs(auth)
 
 /** 单条导航 */
 interface NavLeaf {
@@ -60,7 +60,13 @@ const systemNavItems = computed((): NavLeaf[] => {
     })
   }
   if (isAdmin.value) {
-    items.push({ to: '/admin', label: '管理', match: 'admin-orders', mark: '管' })
+    const n = adminPendingCount.value
+    items.push({
+      to: '/admin',
+      label: n > 0 ? `管理 (${n})` : '管理',
+      match: 'admin-orders',
+      mark: '管'
+    })
   }
   if (!isCloudMembershipMode()) {
     items.push({ to: '/ai-settings', label: '大模型', match: 'ai-settings', mark: '模' })

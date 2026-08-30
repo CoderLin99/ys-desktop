@@ -7,10 +7,11 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { alipayQrUrl, isCloudMembershipMode } from '../lib/cloudConfig'
+import { orderStatusLabel } from '../lib/orderStatus'
 
 const auth = useAuthStore()
 const router = useRouter()
-const { isLoggedIn, emailVerified, isMember, memberExpireLabel, latestOrder, user } =
+const { isLoggedIn, emailVerified, isMember, memberExpireLabel, latestOrder, user, hasPendingOrder } =
   storeToRefs(auth)
 
 /** 转账备注说明 */
@@ -23,7 +24,17 @@ const msg = ref('')
 const err = ref('')
 
 const qr = computed(() => alipayQrUrl())
-const orderStatus = computed(() => latestOrder.value?.status ?? null)
+const orderStatus = computed(() => orderStatusLabel(latestOrder.value?.status))
+/** 复制用：建议支付宝备注 */
+const emailForPay = computed(() => user.value?.email ?? '')
+
+/**
+ * 一键填入转账说明模板。
+ */
+function fillNoteTemplate(): void {
+  if (!emailForPay.value) return
+  note.value = `已转账，注册邮箱：${emailForPay.value}，请审批开通 AI 会员。`
+}
 
 /**
  * 提交开通申请。
@@ -78,18 +89,29 @@ async function logout(): Promise<void> {
           <span :class="isMember ? 'ok' : 'warn'">{{ isMember ? '有效' : '未开通/已过期' }}</span>
         </p>
         <p><strong>到期</strong> {{ memberExpireLabel }}</p>
-        <p v-if="orderStatus">
+        <p v-if="latestOrder">
           <strong>最近申请</strong> {{ orderStatus }}
+          <span v-if="latestOrder.created_at" class="soft">
+            · {{ new Date(latestOrder.created_at).toLocaleString('zh-CN') }}
+          </span>
         </p>
         <button type="button" class="ghost" @click="logout">退出登录</button>
       </section>
 
-      <section v-if="isCloudMembershipMode() && !isMember" class="panel pay">
+      <section v-if="isCloudMembershipMode() && !isMember && hasPendingOrder" class="panel pending">
+        <h2>申请审核中</h2>
+        <p>您的开通申请已提交，管理员通常在 24 小时内处理。通过后刷新本页即可使用 AI。</p>
+        <p v-if="latestOrder?.note" class="soft">备注：{{ latestOrder.note }}</p>
+      </section>
+
+      <section v-else-if="isCloudMembershipMode() && !isMember" class="panel pay">
         <h2>开通 AI 会员</h2>
         <ol class="steps">
-          <li>支付宝扫码转账（建议备注：您的注册邮箱）</li>
-          <li>下方填写转账信息并提交申请</li>
-          <li>管理员审核通过后，AI 解答自动解锁</li>
+          <li>
+            支付宝扫码转账（<strong>备注请写：{{ emailForPay }}</strong>）
+          </li>
+          <li>点击下方「填入说明模板」或自行填写转账信息</li>
+          <li>提交后等待管理员在后台审批</li>
         </ol>
         <div v-if="qr" class="qr-wrap">
           <img :src="qr" alt="支付宝收款码" class="qr" />
@@ -97,11 +119,15 @@ async function logout(): Promise<void> {
         <p v-else class="soft">管理员可在环境变量 VITE_ALIPAY_QR_URL 配置收款码图片。</p>
         <label>
           转账备注 / 说明（必填）
-          <textarea v-model="note" rows="3" placeholder="例：已转账 29 元，支付宝 xxx@..." />
+          <textarea v-model="note" rows="3" placeholder="例：已转账 29 元，备注邮箱 xxx@qq.com" />
         </label>
-        <button type="button" class="primary" :disabled="loading || !note.trim()" @click="apply">
-          {{ loading ? '提交中…' : '我已支付，申请开通' }}
-        </button>
+        <div class="btn-row">
+          <button type="button" class="ghost" @click="fillNoteTemplate">填入说明模板</button>
+          <button type="button" class="primary" :disabled="loading || !note.trim() || !emailVerified" @click="apply">
+            {{ loading ? '提交中…' : '我已支付，申请开通' }}
+          </button>
+        </div>
+        <p v-if="!emailVerified" class="warn">请先验证邮箱后再提交申请。</p>
         <p v-if="msg" class="ok">{{ msg }}</p>
         <p v-if="err" class="err">{{ err }}</p>
       </section>
@@ -198,6 +224,21 @@ button.primary,
   background: var(--teal);
   color: var(--on-accent);
   border: none;
+}
+.panel.pending {
+  border-color: color-mix(in srgb, var(--gold) 40%, var(--line));
+  background: color-mix(in srgb, var(--gold) 8%, var(--surface-solid));
+}
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+.warn {
+  color: var(--seal);
+  font-size: 0.88rem;
+  margin-top: 8px;
 }
 button.ghost {
   background: var(--surface);

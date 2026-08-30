@@ -22,8 +22,10 @@ export const useAuthStore = defineStore('auth', () => {
   const profile = ref<ProfileRow | null>(null)
   /** 会员记录 */
   const membership = ref<MembershipRow | null>(null)
-  /** 最近一次订单 */
+  /** 最近订单 */
   const latestOrder = ref<OrderRow | null>(null)
+  /** 待审批订单（MVP 人工审批） */
+  const pendingOrder = ref<OrderRow | null>(null)
   /** 初始化中 */
   const booting = ref(false)
   /** 是否已完成首次 init */
@@ -42,6 +44,12 @@ export const useAuthStore = defineStore('auth', () => {
     if (!membership.value?.expire_at) return false
     return new Date(membership.value.expire_at) > new Date()
   })
+  /** 是否有待审批申请 */
+  const hasPendingOrder = computed(() => pendingOrder.value?.status === 'pending')
+
+  /** 管理员待审批数量（仅 admin 拉取后有效） */
+  const adminPendingCount = ref(0)
+
   /** 会员到期展示 */
   const memberExpireLabel = computed(() => {
     if (!membership.value?.expire_at) return '未开通'
@@ -68,11 +76,13 @@ export const useAuthStore = defineStore('auth', () => {
       profile.value = null
       membership.value = null
       latestOrder.value = null
+      pendingOrder.value = null
+      adminPendingCount.value = 0
       return
     }
     const sb = getSupabase()
     const uid = user.value.id
-    const [pRes, mRes, oRes] = await Promise.all([
+    const [pRes, mRes, oRes, pendRes] = await Promise.all([
       sb.from('profiles').select('*').eq('id', uid).maybeSingle(),
       sb.from('memberships').select('*').eq('user_id', uid).maybeSingle(),
       sb
@@ -81,11 +91,28 @@ export const useAuthStore = defineStore('auth', () => {
         .eq('user_id', uid)
         .order('created_at', { ascending: false })
         .limit(1)
+        .maybeSingle(),
+      sb
+        .from('orders')
+        .select('*')
+        .eq('user_id', uid)
+        .eq('status', 'pending')
         .maybeSingle()
     ])
     profile.value = pRes.data ?? null
     membership.value = mRes.data ?? null
     latestOrder.value = oRes.data ?? null
+    pendingOrder.value = pendRes.data ?? null
+
+    if (profile.value?.role === 'admin') {
+      const { count } = await sb
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+      adminPendingCount.value = count ?? 0
+    } else {
+      adminPendingCount.value = 0
+    }
   }
 
   /**
@@ -177,6 +204,8 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function applyMembership(note?: string, proofUrl?: string): Promise<void> {
     if (!user.value) throw new Error('请先登录')
+    if (!emailVerified.value) throw new Error('请先验证邮箱后再申请开通')
+    if (hasPendingOrder.value) throw new Error('您已有待审批申请，请等待管理员处理')
     const sb = getSupabase()
     const { error: err } = await sb.from('orders').insert({
       user_id: user.value.id,
@@ -184,7 +213,12 @@ export const useAuthStore = defineStore('auth', () => {
       note: note?.trim() || null,
       proof_url: proofUrl?.trim() || null
     })
-    if (err) throw new Error(err.message)
+    if (err) {
+      if (/unique|duplicate/i.test(err.message)) {
+        throw new Error('您已有待审批申请，请勿重复提交')
+      }
+      throw new Error(err.message)
+    }
     await refreshProfile()
   }
 
@@ -194,6 +228,9 @@ export const useAuthStore = defineStore('auth', () => {
     profile,
     membership,
     latestOrder,
+    pendingOrder,
+    hasPendingOrder,
+    adminPendingCount,
     booting,
     error,
     isLoggedIn,
