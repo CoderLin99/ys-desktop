@@ -20,7 +20,11 @@ hydrateThemeEarly()
 async function bootstrap(): Promise<void> {
   await installTauriDesktopBridge()
   const app = createApp(App)
-  app.use(createPinia())
+  const pinia = createPinia()
+  app.use(pinia)
+  /** 恢复邮箱登录态（Web 会员模式） */
+  const { useAuthStore } = await import('./stores/auth')
+  await useAuthStore().init()
   app.use(router)
   app.use(PrimeVue, {
     /** 注入 zh-CN，避免日历等组件残留英文文案 */

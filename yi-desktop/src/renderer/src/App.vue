@@ -7,6 +7,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useShellStore } from './stores/shell'
 import { useThemeStore } from './stores/theme'
+import { useAuthStore } from './stores/auth'
+import { isCloudMembershipMode, isSupabaseConfigured } from './lib/cloudConfig'
 import ThemeToggle from './components/ThemeToggle.vue'
 import MingAssistantHost from './components/MingAssistantHost.vue'
 /** 侧栏品牌图标（与安装包 / 窗口图标同源） */
@@ -16,7 +18,9 @@ const route = useRoute()
 const router = useRouter()
 const shell = useShellStore()
 const theme = useThemeStore()
+const auth = useAuthStore()
 const { moreOpen } = storeToRefs(shell)
+const { isLoggedIn, isAdmin } = storeToRefs(auth)
 
 /** 单条导航 */
 interface NavLeaf {
@@ -38,8 +42,34 @@ interface NavGroup {
   items: NavLeaf[]
 }
 
+/** 是否使用精简布局（登录 / 管理端） */
+const minimalLayout = computed(() => {
+  const layout = route.meta.layout
+  return layout === 'auth' || layout === 'admin'
+})
+
+/** 系统导航：Web 会员模式隐藏本地 Key 配置 */
+const systemNavItems = computed((): NavLeaf[] => {
+  const items: NavLeaf[] = []
+  if (isSupabaseConfigured()) {
+    items.push({
+      to: isLoggedIn.value ? '/member' : '/login',
+      label: isLoggedIn.value ? '会员' : '登录',
+      match: isLoggedIn.value ? 'member' : 'login',
+      mark: '员'
+    })
+  }
+  if (isAdmin.value) {
+    items.push({ to: '/admin', label: '管理', match: 'admin-orders', mark: '管' })
+  }
+  if (!isCloudMembershipMode()) {
+    items.push({ to: '/ai-settings', label: '大模型', match: 'ai-settings', mark: '模' })
+  }
+  return items
+})
+
 /** 主导航：分组 + 字标，贴合易学气质 */
-const navGroups: NavGroup[] = [
+const navGroups = computed((): NavGroup[] => [
   {
     label: '起盘',
     items: [
@@ -62,9 +92,9 @@ const navGroups: NavGroup[] = [
   },
   {
     label: '系统',
-    items: [{ to: '/ai-settings', label: '大模型', match: 'ai-settings', mark: '模' }]
+    items: systemNavItems.value
   }
-]
+])
 
 /** 手机底部主 Tab（高频入口，最多 5 个含「更多」） */
 const primaryTabs: NavLeaf[] = [
@@ -75,18 +105,31 @@ const primaryTabs: NavLeaf[] = [
 ]
 
 /** 「更多」面板内的次要入口 */
-const moreItems: NavLeaf[] = [
-  { to: '/huangli', label: '黄历', match: 'huangli', mark: '历' },
-  { to: '/ziwei', label: '紫微', match: 'ziwei', mark: '紫' },
-  { to: '/fengshui', label: '风水', match: 'fengshui', mark: '风' },
-  { to: '/hehun', label: '合盘', match: 'hehun', mark: '合' },
-  { to: '/trend', label: '走势', match: 'trend', mark: '势' },
-  { to: '/liuyao', label: '六爻', match: 'liuyao', mark: '爻' },
-  { to: '/ai-settings', label: '大模型', match: 'ai-settings', mark: '模' }
-]
+const moreItems = computed((): NavLeaf[] => {
+  const base: NavLeaf[] = [
+    { to: '/huangli', label: '黄历', match: 'huangli', mark: '历' },
+    { to: '/ziwei', label: '紫微', match: 'ziwei', mark: '紫' },
+    { to: '/fengshui', label: '风水', match: 'fengshui', mark: '风' },
+    { to: '/hehun', label: '合盘', match: 'hehun', mark: '合' },
+    { to: '/trend', label: '走势', match: 'trend', mark: '势' },
+    { to: '/liuyao', label: '六爻', match: 'liuyao', mark: '爻' }
+  ]
+  if (isSupabaseConfigured()) {
+    base.push({
+      to: isLoggedIn.value ? '/member' : '/login',
+      label: isLoggedIn.value ? '会员' : '登录',
+      match: isLoggedIn.value ? 'member' : 'login',
+      mark: '员'
+    })
+  }
+  if (!isCloudMembershipMode()) {
+    base.push({ to: '/ai-settings', label: '大模型', match: 'ai-settings', mark: '模' })
+  }
+  return base
+})
 
 /** 扁平列表：顶栏标题 */
-const flatNav = computed(() => navGroups.flatMap((g) => g.items))
+const flatNav = computed(() => navGroups.value.flatMap((g) => g.items))
 
 /** 是否显示回顶按钮 */
 const showTop = ref(false)
@@ -97,7 +140,7 @@ let mainEl: HTMLElement | null = null
 const pageTitle = computed(() => flatNav.value.find((n) => n.match === route.name)?.label ?? '易学桌面')
 
 /** 当前是否落在「更多」里的路由 */
-const isMoreRoute = computed(() => moreItems.some((n) => n.match === route.name))
+const isMoreRoute = computed(() => moreItems.value.some((n) => n.match === route.name))
 
 /**
  * 监听主区滚动，超过阈值显示回顶。
@@ -163,7 +206,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="shell" :class="{ 'more-open': moreOpen }">
+  <div v-if="minimalLayout" class="minimal-shell">
+    <router-view />
+  </div>
+  <div v-else class="shell" :class="{ 'more-open': moreOpen }">
     <!-- 手机顶栏：标题 + 主题，无汉堡（导航改底部 Tab） -->
     <header class="topbar">
       <img class="topbar-mark" :src="appIcon" width="28" height="28" alt="" />
@@ -280,6 +326,11 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.minimal-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--paper);
+}
 .shell {
   display: grid;
   grid-template-columns: 228px 1fr;

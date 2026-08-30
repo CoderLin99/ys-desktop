@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self' ipc: http://ipc.localhost; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' ipc: http://ipc.localhost https://api.deepseek.com https://api.siliconflow.cn https://api.open-meteo.com http://127.0.0.1:* http://localhost:*"
+      content="default-src 'self' ipc: http://ipc.localhost; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' ipc: http://ipc.localhost https://api.deepseek.com https://api.siliconflow.cn https://api.open-meteo.com https://*.supabase.co wss://*.supabase.co https://*.workers.dev http://127.0.0.1:* http://localhost:*"
     />
     <!-- viewport-fit=cover：刘海/手势条；限制缩放避免 Android 输入框顶飞布局 -->
     <meta

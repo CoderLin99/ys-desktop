@@ -85,6 +85,8 @@ import { useBaziProfilesStore } from '../stores/baziProfiles'
 import { storeToRefs } from 'pinia'
 import { buildChartKey, useAiMemoryStore } from '../stores/aiMemory'
 import { useAssistContextStore } from '../stores/assistContext'
+import { useAuthStore } from '../stores/auth'
+import { isCloudMembershipMode } from '../lib/cloudConfig'
 /** 桌宠异步加载：运行时出错也不要拖垮整张排盘页 */
 const WhalePet = defineAsyncComponent({
   loader: () => import('../components/WhalePet.vue'),
@@ -99,6 +101,8 @@ const WhalePet = defineAsyncComponent({
 /** 命例本地存储 */
 const profilesStore = useBaziProfilesStore()
 const { profiles, activeProfileId } = storeToRefs(profilesStore)
+/** 邮箱登录 / 会员 */
+const auth = useAuthStore()
 /** AI 会话记忆（本盘追问 + 最近总批） */
 const aiMemoryStore = useAiMemoryStore()
 /** 保存命例后的提示 */
@@ -505,9 +509,18 @@ onBeforeUnmount(() => {
 })
 
 /**
- * 是否已具备可调用条件（与全局助手同一判定）。
+ * 是否可使用 AI（桌面 BYOK 或 Web 会员）。
  */
-const aiConfigured = computed(() => isAiConfigured(aiSettings.value))
+const aiConfigured = computed(() => auth.canUseAi)
+
+/** AI 未就绪引导 */
+const aiGateHint = computed(() => {
+  if (!isCloudMembershipMode()) return '尚未配置大模型接口，请到侧栏「大模型」页填写。'
+  if (!auth.isLoggedIn) return '请先登录后使用 AI（会员中心）。'
+  if (!auth.emailVerified) return '请先验证邮箱后再使用 AI。'
+  if (!auth.isMember) return '请开通会员后使用 AI（会员中心申请）。'
+  return ''
+})
 
 /** 助手拖拽后的视口坐标；未拖过则为 null，走默认右下半屏 */
 const assistBox = ref<{ left: number; top: number; width: number; height: number } | null>(null)
@@ -2134,7 +2147,8 @@ run()
 
           <div class="ai-assist-body">
             <p v-if="!aiConfigured" class="ai-assist-banner">
-              尚未配置大模型接口，请到侧栏「大模型」页填写。
+              {{ aiGateHint }}
+              <router-link v-if="isCloudMembershipMode()" to="/member">前往会员中心</router-link>
             </p>
 
             <div class="form ai-form">

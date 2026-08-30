@@ -3,6 +3,23 @@
  */
 /// <reference types="vite/client" />
 
+/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  /** Supabase 项目 URL */
+  readonly VITE_SUPABASE_URL?: string
+  /** Supabase anon key */
+  readonly VITE_SUPABASE_ANON_KEY?: string
+  /** Cloudflare Worker API 根地址 */
+  readonly VITE_CLOUD_API_URL?: string
+  /** 支付宝收款码图片 URL */
+  readonly VITE_ALIPAY_QR_URL?: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+
 export {}
 
 declare module '*.png' {

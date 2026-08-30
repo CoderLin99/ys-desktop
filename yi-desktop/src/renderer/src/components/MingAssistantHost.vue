@@ -23,10 +23,13 @@ import {
   useAssistContextStore,
   type AssistFeatureId
 } from '../stores/assistContext'
+import { useAuthStore } from '../stores/auth'
+import { isCloudMembershipMode } from '../lib/cloudConfig'
 import WhalePet from './WhalePet.vue'
 
 const route = useRoute()
 const assist = useAssistContextStore()
+const auth = useAuthStore()
 const {
   otherFilledSlots,
   extraIncludeIds,
@@ -101,8 +104,19 @@ watch(
   { immediate: true }
 )
 
-const configured = computed(() => isAiConfigured(settings.value))
+const configured = computed(() => auth.canUseAi)
 const canAsk = computed(() => hasActiveFacts.value && configured.value && !loading.value)
+
+/** AI 未就绪时的引导文案 */
+const aiGateHint = computed(() => {
+  if (!isCloudMembershipMode()) {
+    return '请先在「大模型配置」填写 API Key'
+  }
+  if (!auth.isLoggedIn) return '请先登录后使用 AI（会员中心）'
+  if (!auth.emailVerified) return '请先验证邮箱后再使用 AI'
+  if (!auth.isMember) return '请开通会员后使用 AI（会员中心申请）'
+  return ''
+})
 
 /** 当前页标题 */
 const activeTitle = computed(() => {
@@ -376,7 +390,9 @@ onBeforeUnmount(() => {
 
       <div class="ai-assist-body">
         <p v-if="!configured" class="ai-assist-banner">
-          尚未配置大模型接口，请到侧栏「大模型」页填写。
+          {{ aiGateHint }}
+          <router-link v-if="isCloudMembershipMode()" to="/member">前往会员中心</router-link>
+          <router-link v-else to="/ai-settings">前往大模型配置</router-link>
         </p>
 
         <div class="ctx-bar">

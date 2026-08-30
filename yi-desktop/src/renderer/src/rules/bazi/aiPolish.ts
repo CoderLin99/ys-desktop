@@ -6,6 +6,7 @@
  * 润色时注入书库知识包 + 分区断语（总断/喜用格局/姻缘/事业/财运/学业等）。
  */
 import { buildRagKnowledgeContext } from './rag/buildContext'
+import { shouldUseCloudAi, cloudStreamChat, type CloudChatMessage } from './cloudAi'
 import type { AssertionAiSections } from './assert'
 import { modernYinStudyPromptGuide } from './studyTone'
 import { modernFemaleMingPromptGuide } from './femaleTone'
@@ -931,6 +932,16 @@ async function streamBuiltChatRequest(
   built: { url: string; headers: Record<string, string>; body: string },
   onDelta?: AiPolishDeltaHandler
 ): Promise<string> {
+  /** Web 会员模式：改走 Cloudflare Worker，不直连大模型 */
+  if (shouldUseCloudAi()) {
+    const payload = JSON.parse(built.body) as {
+      messages?: CloudChatMessage[]
+      temperature?: number
+    }
+    if (!payload.messages?.length) throw new Error('AI 请求缺少 messages')
+    return cloudStreamChat(payload.messages, payload.temperature ?? 0.7, onDelta)
+  }
+
   let sseBuffer = ''
   let full = ''
 
@@ -1022,6 +1033,11 @@ async function streamChatMessages(
   temperature: number,
   onDelta?: AiPolishDeltaHandler
 ): Promise<string> {
+  /** Web 会员模式：云端代理 */
+  if (shouldUseCloudAi()) {
+    return cloudStreamChat(messages, temperature, onDelta)
+  }
+
   if (!settings.apiKey.trim() && !settings.baseUrl.includes('127.0.0.1')) {
     throw new Error('请先填写 API Key（本地 Ollama 可留空）')
   }

@@ -12,6 +12,10 @@ import {
   type AiPolishSettings,
   type DeepSeekBalanceResult
 } from '@rules/bazi/aiPolish'
+import { isCloudMembershipMode } from '../lib/cloudConfig'
+
+/** Web 云端会员模式 */
+const cloudMode = isCloudMembershipMode()
 
 /** 本机 AI 配置 */
 const settings = ref<AiPolishSettings>(loadAiSettings())
@@ -107,7 +111,12 @@ onMounted(() => {
   <div class="page rise">
     <header class="head">
       <h1>大模型配置</h1>
-      <p>
+      <p v-if="cloudMode">
+        Web 会员模式下 AI 由云端代理，用户无需填写 Key。请前往
+        <router-link to="/member">会员中心</router-link>
+        或管理后台配置模型。
+      </p>
+      <p v-else>
         配置 OpenAI 兼容接口后，各功能页右下角「命师助手」即可对本页结果追问。密钥只保存在本机。
       </p>
     </header>

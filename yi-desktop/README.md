@@ -78,6 +78,8 @@ npx tauri ios build
 
 浏览器预览没有 Rust 代理，AI 接口可能被 CORS 拦截；请用 `npm run dev` 或安装包。
 
+完整部署步骤见仓库根目录 **[MEMBERSHIP.md](../MEMBERSHIP.md)**（Supabase + Cloudflare Worker + 管理后台）。
+
 ## 零成本让别人访问（Web 静态托管）
 
 前端可单独打包成静态站（无服务器费用）。罗盘/定位需 **HTTPS**，下列平台均免费提供。

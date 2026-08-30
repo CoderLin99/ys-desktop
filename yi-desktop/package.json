@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@primeuix/themes": "^1.2.3",
+    "@supabase/supabase-js": "^2.112.4",
     "@tauri-apps/api": "^2.8.0",
     "lunar-javascript": "^1.7.7",
     "pinia": "^3.0.3",

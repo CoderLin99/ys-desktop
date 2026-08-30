@@ -1,0 +1,11 @@
+name = "yi-cloud-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[vars]
+# 在 Cloudflare Dashboard → Settings → Variables 配置：
+# SUPABASE_URL = https://xxxx.supabase.co
+# CORS_ORIGIN = https://your.pages.dev  （留空则允许 *）
+
+# 敏感项用 Secret：
+# wrangler secret put SUPABASE_SERVICE_ROLE_KEY
