@@ -50,6 +50,10 @@
   --band-low: #b5402a;
   /* 紫微/风水等页的强调色（命宫、主按钮） */
   --accent: #8b5a2b;
+  /* 科幻 HUD：青金辉光（罗盘/面板描边，避开紫霓虹俗套） */
+  --glow-teal: color-mix(in srgb, var(--teal) 45%, transparent);
+  --glow-gold: color-mix(in srgb, var(--gold) 40%, transparent);
+  --hud-line: color-mix(in srgb, var(--gold) 32%, var(--line));
   --font-brand: 'STKaiti', 'KaiTi', 'Songti SC', 'Noto Serif SC', serif;
   --font-display: 'Songti SC', 'Noto Serif SC', 'STSong', serif;
   --font-ui: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
@@ -114,6 +118,9 @@ html[data-theme='dark'] {
   --band-mid: #e0c07a;
   --band-low: #f07860;
   --accent: #d4a574;
+  --glow-teal: color-mix(in srgb, var(--teal) 55%, transparent);
+  --glow-gold: color-mix(in srgb, var(--gold) 48%, transparent);
+  --hud-line: color-mix(in srgb, var(--gold) 40%, var(--line));
 }
 
 /* 五行工具类（细盘 / 芯片复用） */

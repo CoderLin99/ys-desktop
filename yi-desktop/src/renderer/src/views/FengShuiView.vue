@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
  * 阳宅风水页：GPS/手填经纬度 + 罗盘坐向 + 八宅 + 年/月飞星 + 助手上下文。
+ * 布局：PC 左表单右罗盘；移动端罗盘优先，表单折叠为网格。
  */
 import { computed, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -29,6 +30,10 @@ const latitude = ref<number | null>(null)
 const longitude = ref<number | null>(null)
 /** GPS 精度（米），手填时为空 */
 const accuracy = ref<number | null>(null)
+/** 横倾角（beta） */
+const tiltX = ref<number | null>(null)
+/** 竖倾角（gamma） */
+const tiltY = ref<number | null>(null)
 const locating = ref(false)
 const compassOn = ref(false)
 const result = ref<FengShuiResult | null>(null)
@@ -87,12 +92,16 @@ async function toggleCompass(): Promise<void> {
     stopCompass?.()
     stopCompass = null
     compassOn.value = false
+    tiltX.value = null
+    tiltY.value = null
     return
   }
   try {
     await requestCompassPermission()
     stopCompass = watchCompass((r) => {
-      headingDeg.value = Math.round(r.headingDeg)
+      headingDeg.value = Math.round(r.headingDeg * 10) / 10
+      tiltX.value = r.tiltX ?? null
+      tiltY.value = r.tiltY ?? null
     })
     compassOn.value = true
   } catch (e) {
@@ -151,7 +160,7 @@ loadProfile()
 </script>
 
 <template>
-  <div class="page rise">
+  <div class="page rise fs-page">
     <header class="head">
       <h1>阳宅风水</h1>
       <p>
@@ -159,89 +168,104 @@ loadProfile()
       </p>
     </header>
 
-    <div class="panel">
-      <label>
-        命例
-        <select
-          :value="activeProfileId ?? ''"
-          @change="
-            profilesStore.setActive(($event.target as HTMLSelectElement).value || null);
-            loadProfile()
-          "
-        >
-          <option value="">手填</option>
-          <option v-for="p in profiles" :key="p.id" :value="p.id">{{ p.label }}</option>
-        </select>
-      </label>
-      <label>
-        年
-        <input v-model.number="year" type="number" min="1900" max="2100" />
-      </label>
-      <label>
-        月
-        <input v-model.number="month" type="number" min="1" max="12" />
-      </label>
-      <label>
-        日
-        <input v-model.number="day" type="number" min="1" max="31" />
-      </label>
-      <label>
-        性别
-        <select v-model="gender">
-          <option value="male">男</option>
-          <option value="female">女</option>
-        </select>
-      </label>
-      <label>
-        朝向角（向，正北=0）
-        <input v-model.number="headingDeg" type="number" min="0" max="359" />
-        <span class="hint">{{ headingLabel }}</span>
-      </label>
-
-      <ElectronicCompass :heading-deg="headingDeg" :active="compassOn" :size="240" />
-
-      <div class="geo-block">
-        <label>
-          纬度
-          <input
-            v-model.number="latitude"
-            type="number"
-            step="0.00001"
-            placeholder="可手填"
-            @change="onManualCoord"
-          />
-        </label>
-        <label>
-          经度
-          <input
-            v-model.number="longitude"
-            type="number"
-            step="0.00001"
-            placeholder="可手填"
-            @change="onManualCoord"
-          />
-        </label>
-        <p class="geo-meta">
-          <template v-if="latitude != null && longitude != null">
-            当前坐标 {{ Number(latitude).toFixed(5) }}, {{ Number(longitude).toFixed(5) }}
-            <template v-if="accuracy != null"> · 精度约 {{ Math.round(accuracy) }} 米</template>
-            <template v-else> · 手填/无精度</template>
-          </template>
-          <template v-else>尚未填写经纬度</template>
+    <div class="workspace">
+      <!-- 罗盘舞台：移动端优先展示 -->
+      <section class="compass-stage" aria-label="电子罗盘">
+        <ElectronicCompass
+          :heading-deg="headingDeg"
+          :active="compassOn"
+          :tilt-x="tiltX"
+          :tilt-y="tiltY"
+        />
+        <div class="compass-actions">
+          <button type="button" class="ghost" @click="toggleCompass">
+            {{ compassOn ? '关闭感应' : '开启电子罗盘' }}
+          </button>
+          <button type="button" class="primary" @click="run">推算坐向</button>
+        </div>
+        <p class="geo-meta tip">
+          平板/手机：开启后对准房屋「门向外」方向；红十字丝对准「向」。桌面无传感器时可手填角度。
         </p>
-        <button type="button" class="ghost" :disabled="locating" @click="locate">
-          {{ locating ? '定位中…' : '使用定位' }}
-        </button>
-      </div>
+      </section>
 
-      <button type="button" class="ghost" @click="toggleCompass">
-        {{ compassOn ? '关闭电子罗盘' : '开启电子罗盘（需权限）' }}
-      </button>
-      <p class="geo-meta">
-        平板/手机：开启后对准房屋「门向外」方向；指针固定表示当前「向」，盘面随设备转动。桌面无传感器时可手填角度。
-      </p>
-      <button type="button" class="primary" @click="run">推算</button>
-      <p v-if="errMsg" class="err">{{ errMsg }}</p>
+      <!-- 参数面板 -->
+      <section class="panel" aria-label="宅主与坐标">
+        <div class="field-grid">
+          <label>
+            命例
+            <select
+              :value="activeProfileId ?? ''"
+              @change="
+                profilesStore.setActive(($event.target as HTMLSelectElement).value || null);
+                loadProfile()
+              "
+            >
+              <option value="">手填</option>
+              <option v-for="p in profiles" :key="p.id" :value="p.id">{{ p.label }}</option>
+            </select>
+          </label>
+          <label>
+            年
+            <input v-model.number="year" type="number" min="1900" max="2100" />
+          </label>
+          <label>
+            月
+            <input v-model.number="month" type="number" min="1" max="12" />
+          </label>
+          <label>
+            日
+            <input v-model.number="day" type="number" min="1" max="31" />
+          </label>
+          <label>
+            性别
+            <select v-model="gender">
+              <option value="male">男</option>
+              <option value="female">女</option>
+            </select>
+          </label>
+          <label>
+            朝向角（向，正北=0）
+            <input v-model.number="headingDeg" type="number" min="0" max="359.9" step="0.1" />
+            <span class="hint">{{ headingLabel }}</span>
+          </label>
+        </div>
+
+        <div class="geo-block">
+          <label>
+            纬度
+            <input
+              v-model.number="latitude"
+              type="number"
+              step="0.00001"
+              placeholder="可手填"
+              @change="onManualCoord"
+            />
+          </label>
+          <label>
+            经度
+            <input
+              v-model.number="longitude"
+              type="number"
+              step="0.00001"
+              placeholder="可手填"
+              @change="onManualCoord"
+            />
+          </label>
+          <p class="geo-meta">
+            <template v-if="latitude != null && longitude != null">
+              当前坐标 {{ Number(latitude).toFixed(5) }}, {{ Number(longitude).toFixed(5) }}
+              <template v-if="accuracy != null"> · 精度约 {{ Math.round(accuracy) }} 米</template>
+              <template v-else> · 手填/无精度</template>
+            </template>
+            <template v-else>尚未填写经纬度</template>
+          </p>
+          <button type="button" class="ghost" :disabled="locating" @click="locate">
+            {{ locating ? '定位中…' : '使用定位' }}
+          </button>
+        </div>
+
+        <p v-if="errMsg" class="err">{{ errMsg }}</p>
+      </section>
     </div>
 
     <section v-if="result" class="result">
@@ -296,6 +320,10 @@ loadProfile()
 </template>
 
 <style scoped>
+.fs-page {
+  width: 100%;
+  max-width: 1100px;
+}
 .head h1 {
   margin: 0;
   font-family: var(--font-brand);
@@ -307,12 +335,48 @@ loadProfile()
   line-height: 1.65;
   max-width: 52em;
 }
-.panel {
-  margin-top: 18px;
+
+/* PC：左参数右罗盘；窄屏：罗盘在上 */
+.workspace {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.05fr);
+  gap: 18px;
+  align-items: start;
+  width: 100%;
+}
+.compass-stage {
+  order: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 14px 18px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, var(--line));
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      color-mix(in srgb, var(--teal) 10%, transparent),
+      transparent 55%
+    ),
+    var(--surface-solid);
+  box-shadow:
+    0 12px 36px color-mix(in srgb, var(--ink) 8%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent);
+}
+.compass-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 14px;
-  align-items: end;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+  margin-top: 4px;
+}
+.panel {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   padding: 18px 20px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -321,22 +385,34 @@ loadProfile()
   width: 100%;
   box-sizing: border-box;
 }
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+.field-grid label:first-child,
+.field-grid label:last-child {
+  grid-column: 1 / -1;
+}
 label {
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 0.85rem;
   color: var(--ink-soft);
+  min-width: 0;
 }
 input,
 select {
-  min-width: 5rem;
+  width: 100%;
+  min-width: 0;
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--input-bg);
   color: var(--ink);
   font-size: 16px;
+  box-sizing: border-box;
 }
 .hint {
   font-size: 0.8rem;
@@ -344,22 +420,33 @@ select {
 }
 .geo-block {
   width: 100%;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
   gap: 12px;
   align-items: end;
   padding: 14px;
   border-radius: 12px;
-  border: 1px dashed var(--line);
+  border: 1px dashed color-mix(in srgb, var(--teal) 35%, var(--line));
   background: color-mix(in srgb, var(--teal) 6%, var(--surface-solid));
   box-sizing: border-box;
+}
+.geo-block .geo-meta {
+  grid-column: 1 / -1;
 }
 .geo-meta {
   width: 100%;
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--ink);
+}
+.geo-meta.tip {
+  font-weight: 500;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  text-align: center;
+  max-width: 36em;
 }
 .err {
   width: 100%;
@@ -442,14 +529,6 @@ h3 {
 .fx {
   color: var(--ink-soft);
 }
-.ai {
-  white-space: pre-wrap;
-  background: color-mix(in srgb, var(--ink) 4%, var(--surface-solid));
-  padding: 12px;
-  border-radius: 12px;
-  line-height: 1.6;
-  color: var(--ink);
-}
 button.primary,
 button.ghost {
   padding: 10px 16px;
@@ -457,44 +536,53 @@ button.ghost {
   border: 1px solid var(--line);
   cursor: pointer;
   min-height: var(--touch-min);
+  font-size: 0.95rem;
 }
 button.primary {
   background: var(--teal);
   color: var(--on-accent);
   border-color: transparent;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--teal) 28%, transparent);
 }
 button.ghost {
   background: var(--surface);
   color: var(--ink);
 }
+button.ghost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
-@media (max-width: 720px) {
+@media (max-width: 860px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+  .compass-stage {
+    order: 1;
+  }
   .panel {
-    flex-direction: column;
-    align-items: stretch;
+    order: 2;
   }
-  .panel label {
-    width: 100%;
+  .geo-block {
+    grid-template-columns: 1fr 1fr;
   }
-  .panel input,
-  .panel select {
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
+  .geo-block > button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .field-grid {
+    grid-template-columns: 1fr 1fr;
   }
   .fx-grid,
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .feixing-board {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .geo-row,
-  .loc-fields {
-    display: flex;
+  .compass-actions {
     flex-direction: column;
-    gap: 8px;
+  }
+  .compass-actions button {
     width: 100%;
   }
 }

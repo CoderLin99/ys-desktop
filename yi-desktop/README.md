@@ -78,6 +78,46 @@ npx tauri ios build
 
 浏览器预览没有 Rust 代理，AI 接口可能被 CORS 拦截；请用 `npm run dev` 或安装包。
 
+## 零成本让别人访问（Web 静态托管）
+
+前端可单独打包成静态站（无服务器费用）。罗盘/定位需 **HTTPS**，下列平台均免费提供。
+
+```bash
+cd yi-desktop
+npm install
+npm run build:vite          # 产物在 yi-desktop/dist/
+```
+
+### 方案一：Cloudflare Pages（推荐）
+
+1. 把仓库推到 GitHub
+2. [Cloudflare Pages](https://pages.cloudflare.com/) → Create → 连接本仓库
+3. 构建设置：
+   - **Root directory**：`yi-desktop`
+   - **Build command**：`npm run build:vite`
+   - **Output directory**：`dist`
+4. 部署后得到 `https://xxx.pages.dev`，把链接发给他人即可
+
+### 方案二：Vercel / Netlify
+
+同样连接 GitHub，Root = `yi-desktop`，Build = `npm run build:vite`，Publish = `dist`。
+
+### 方案三：GitHub Pages
+
+仓库需开启 Pages。可用 Actions 工作流（见 `.github/workflows/web-pages.yml`）：推送后自动构建并发布。
+
+本地预览打包结果：
+
+```bash
+npm run preview             # 默认 http://localhost:4173
+```
+
+**注意**
+
+- AI 润色在纯 Web 下可能因 CORS 失败（桌面/安卓走 Rust 代理）；排盘、黄历、罗盘、合盘等本地规则可正常用
+- 手机浏览器打开 HTTPS 链接后，才可申请罗盘/定位权限
+- 若只想给熟人用：打 APK（`npm run android:build`）或 exe，侧载安装也是零托管成本
+
 ### 古籍 RAG（离线 BM25）
 
 AI 润色会从 **本地古籍语料** 离线 BM25 检索段落。首次或更新语料：

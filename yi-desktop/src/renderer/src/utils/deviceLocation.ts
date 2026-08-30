@@ -13,12 +13,16 @@ export interface GeoReading {
   accuracy?: number
 }
 
-/** 罗盘读数 */
+/** 罗盘读数（含可选倾角，供 HUD 横/竖展示） */
 export interface CompassReading {
   /** 朝向角：正北=0，顺时针 0–360 */
   headingDeg: number
   /** 来源说明 */
   source: string
+  /** 绕 X 轴倾角（beta，前后），度 */
+  tiltX?: number | null
+  /** 绕 Y 轴倾角（gamma，左右），度 */
+  tiltY?: number | null
 }
 
 /**
@@ -78,14 +82,20 @@ export async function requestCompassPermission(): Promise<void> {
 }
 
 /**
- * 监听罗盘，返回取消函数。
+ * 监听罗盘，返回取消函数；同时回传 beta/gamma 倾角（若有）。
  * @param onReading 回调
  */
 export function watchCompass(onReading: (r: CompassReading) => void): () => void {
   const handler = (ev: Event) => {
-    const h = headingFromOrientation(ev as DeviceOrientationEvent)
+    const oe = ev as DeviceOrientationEvent
+    const h = headingFromOrientation(oe)
     if (h == null) return
-    onReading({ headingDeg: h, source: 'device-orientation' })
+    onReading({
+      headingDeg: h,
+      source: 'device-orientation',
+      tiltX: typeof oe.beta === 'number' ? oe.beta : null,
+      tiltY: typeof oe.gamma === 'number' ? oe.gamma : null
+    })
   }
   window.addEventListener('deviceorientationabsolute', handler as EventListener, true)
   window.addEventListener('deviceorientation', handler as EventListener, true)

@@ -11,6 +11,8 @@ const host = process.env.TAURI_DEV_HOST
 export default defineConfig({
   root: resolve('src/renderer'),
   plugins: [vue()],
+  // 相对路径：GitHub Pages 子路径 / Cloudflare / 本地 preview 均可
+  base: './',
   resolve: {
     alias: {
       '@renderer': resolve('src/renderer/src'),
