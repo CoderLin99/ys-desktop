@@ -1,0 +1,59 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "src/lib/divination/engine/golden/**",
+    "src/lib/divination/engine/classics/**",
+    "src/lib/divination/engine/guide/**",
+    "src/lib/divination/engine/ziwei/aiPolish.ts",
+    "src/lib/divination/engine/fengshui/aiPolish.ts",
+    "src/lib/divination/engine/bazi/rag/**",
+    "src/lib/divination/engine/bazi/aiPolish.ts",
+    "src/lib/divination/engine/bazi/assert.ts",
+    "src/lib/divination/engine/bazi/calendar.ts",
+    "src/lib/divination/engine/bazi/career.ts",
+    "src/lib/divination/engine/bazi/classics.ts",
+    "src/lib/divination/engine/bazi/cloudAi.ts",
+    "src/lib/divination/engine/bazi/cong.ts",
+    "src/lib/divination/engine/bazi/dailyFortune.ts",
+    "src/lib/divination/engine/bazi/detail.ts",
+    "src/lib/divination/engine/bazi/femaleTone.ts",
+    "src/lib/divination/engine/bazi/hehua.ts",
+    "src/lib/divination/engine/bazi/hehun.ts",
+    "src/lib/divination/engine/bazi/kin.ts",
+    "src/lib/divination/engine/bazi/liunian.ts",
+    "src/lib/divination/engine/bazi/mdLite.ts",
+    "src/lib/divination/engine/bazi/methodologyGuide.ts",
+    "src/lib/divination/engine/bazi/mingAgents.ts",
+    "src/lib/divination/engine/bazi/ming.ts",
+    "src/lib/divination/engine/bazi/solarTime.ts",
+    "src/lib/divination/engine/bazi/spouse.ts",
+    "src/lib/divination/engine/bazi/studyTone.ts",
+    "src/lib/divination/engine/bazi/trend.ts",
+    "src/lib/divination/engine/bazi/yun.ts",
+    "src/lib/divination/engine/rules.test.ts"
+  ]
+}

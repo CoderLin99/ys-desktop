@@ -1,0 +1,10 @@
+{
+  "wangXiangScore": { "旺": 18, "相": 10, "休": 0, "囚": -8, "死": -14 },
+  "baseScore": 50,
+  "weakBelow": 42,
+  "strongAbove": 58,
+  "deDiRootMin": 0.5,
+  "ganBoostFactor": 3,
+  "rootBoostFactor": 6,
+  "note": "judgeStrength 扶抑打分阈值；改此表即改强弱判定。"
+}
