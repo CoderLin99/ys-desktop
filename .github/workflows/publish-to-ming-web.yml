@@ -5,6 +5,10 @@ name: Publish to ming-web
 
 on:
   workflow_dispatch:
+  # ming-web-standalone 有推送时自动发布（需已配置 MING_WEB_DEPLOY_TOKEN）
+  push:
+    branches:
+      - ming-web-standalone
 
 permissions:
   contents: read
