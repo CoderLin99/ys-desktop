@@ -1,6 +1,6 @@
 import { query, withTransaction } from "@/lib/db";
 import { isAdmin } from "@/lib/data/profiles";
-import { AI_TRIAL_LIMIT } from "./constants";
+import { getAiTrialLimit } from "./settings";
 
 /** 会员行 */
 export interface MembershipRow {
@@ -83,8 +83,9 @@ export async function getMembershipStatus(
   );
   const trialUsed = usage.rows[0]?.trial_used ?? 0;
   const membership = await getMembership(userId);
+  const trialLimit = await getAiTrialLimit();
 
-  const trialRemaining = Math.max(0, AI_TRIAL_LIMIT - trialUsed);
+  const trialRemaining = Math.max(0, trialLimit - trialUsed);
   const canUseAi = admin || member || trialRemaining > 0;
 
   return {
@@ -92,7 +93,7 @@ export async function getMembershipStatus(
     isAdmin: admin,
     expireAt: membership?.expire_at?.toISOString() ?? null,
     trialUsed,
-    trialLimit: AI_TRIAL_LIMIT,
+    trialLimit,
     trialRemaining,
     canUseAi,
   };
@@ -106,6 +107,8 @@ export async function getMembershipStatus(
 export async function assertAndConsumeAiAccess(userId: string): Promise<void> {
   if (await isAdmin(userId)) return;
   if (await isActiveMember(userId)) return;
+
+  const trialLimit = await getAiTrialLimit();
 
   await withTransaction(async (client) => {
     await client.query(
@@ -122,9 +125,9 @@ export async function assertAndConsumeAiAccess(userId: string): Promise<void> {
     );
     const used = locked.rows[0]?.trial_used ?? 0;
 
-    if (used >= AI_TRIAL_LIMIT) {
+    if (used >= trialLimit) {
       throw new Error(
-        `AI 试用已用完（${AI_TRIAL_LIMIT} 次），请开通会员后继续使用`,
+        `AI 试用已用完（${trialLimit} 次），请开通会员后继续使用`,
       );
     }
 

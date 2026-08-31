@@ -5,7 +5,7 @@ import {
   requireAdminSession,
 } from "@/lib/membership/http/admin";
 import { approveOrder } from "@/lib/membership/orders";
-import { MEMBERSHIP_APPROVE_DAYS } from "@/lib/membership/constants";
+import { getMembershipApproveDays } from "@/lib/membership/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export async function POST(
   if (isErrorResponse(session)) return session;
 
   const { id } = await context.params;
-  let days = MEMBERSHIP_APPROVE_DAYS;
+  let days = await getMembershipApproveDays();
   try {
     const body = (await request.json()) as { days?: number };
     if (body.days && body.days > 0 && body.days <= 365) {

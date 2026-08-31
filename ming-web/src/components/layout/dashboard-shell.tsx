@@ -16,6 +16,7 @@ function buildNavItems(isAdmin: boolean) {
   ];
   if (isAdmin) {
     items.push({ href: "/admin/orders", label: "订单审批" });
+    items.push({ href: "/admin/settings", label: "站点配置" });
   }
   return items;
 }

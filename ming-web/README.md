@@ -57,6 +57,8 @@ npx @better-auth/cli migrate
 # 业务表
 psql "$DATABASE_URL" -f db/migrations/001_profiles.sql
 psql "$DATABASE_URL" -f db/migrations/002_memberships.sql
+psql "$DATABASE_URL" -f db/migrations/003_membership_orders_ai.sql
+psql "$DATABASE_URL" -f db/migrations/004_site_settings.sql
 
 npm run dev
 # http://localhost:5555
@@ -82,6 +84,30 @@ npm run test:golden   # 46 项（八字+神煞+紫微 iztro+六爻+黄历+风水
 ```
 
 登录后 `/workspace` → **服务端排盘工具** 可一键测各 API。
+
+## 会员与 AI 试用
+
+| 用户 | 排盘 | AI 解读 |
+|------|------|---------|
+| 未登录 | — | 不可用 |
+| 登录非会员 | 免费 | **试用 N 次**（后台可配，默认 3） |
+| 有效会员 | 免费 | **不限次** |
+| 管理员 | 免费 | 不限次 |
+
+**开通流程**（与 ys-desktop 相同）：`/member` → 生成订单号 → 支付宝/微信扫码（备注订单号）→ 上传截图 → 管理员 `/admin/orders` 审批（默认天数可在 `/admin/settings` 配置）。
+
+环境变量：
+
+```env
+NEXT_PUBLIC_ALIPAY_QR_URL=/pay/alipay-qr.svg
+NEXT_PUBLIC_WECHAT_QR_URL=/pay/wechat-qr.svg
+```
+
+设管理员（SQL）：
+
+```sql
+update profiles set role = 'admin' where user_id = '你的BetterAuth用户ID';
+```
 
 ### 请求示例
 

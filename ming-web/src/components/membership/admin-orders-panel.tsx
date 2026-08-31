@@ -24,14 +24,24 @@ interface AdminOrder {
 }
 
 /**
- * 管理员：订单审批（通过 +30 天 / 拒绝）。
+ * 管理员：订单审批（通过 / 拒绝）。
+ * @param defaultApproveDays 站点配置的默认开通天数
  */
-export function AdminOrdersPanel() {
+export function AdminOrdersPanel({
+  defaultApproveDays = 30,
+}: {
+  /** 来自站点配置的默认审批开通天数 */
+  defaultApproveDays?: number;
+}) {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
-  const [approveDays, setApproveDays] = useState(30);
+  const [approveDays, setApproveDays] = useState(defaultApproveDays);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+
+  useEffect(() => {
+    setApproveDays(defaultApproveDays);
+  }, [defaultApproveDays]);
 
   /** 加载订单 */
   const load = useCallback(async () => {
