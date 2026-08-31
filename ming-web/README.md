@@ -105,48 +105,20 @@ npm run test:golden   # 46 项（八字+神煞+紫微 iztro+六爻+黄历+风水
 { "year": 1990, "month": 5, "day": 1, "gender": "male", "headingDeg": 180 }
 ```
 
-## 服务端八字排盘（已实现）
-
-算法位于 `src/lib/divination/engine/`（**禁止 Client Component import**），经 API 对外：
-
-```http
-POST /api/divination/bazi
-Content-Type: application/json
-Cookie: （Better Auth 会话）
-
-{
-  "year": 1999,
-  "month": 6,
-  "day": 29,
-  "hour": 7,
-  "minute": 20,
-  "dayCutover": "ziZheng"
-}
-```
-
-响应仅含展示字段（四柱、神煞 brief），**不含**查法 `rule` / `basis`，降低逆向价值。
-
-```bash
-npm run test:golden   # 18 项八字+神煞黄金测试
-```
-
-登录后可在 `/workspace` 用「八字排盘（服务端）」面板验证。
-
 ## 与 ys-desktop 的关系
 
 | | **ming-web（本项目）** | **ys-desktop** |
 |--|------------------------|----------------|
 | 形态 | Web SaaS | Tauri 桌面 + Vue Web |
-| 排盘 | 待迁入 `lib/divination` | 已有 `rules/*` 本地引擎 |
+| 排盘 | 服务端 API 已覆盖八字/紫微/六爻/黄历/风水 | 已有 `rules/*` 本地引擎 |
 | 会员 | `memberships` 表占位 | Supabase + 人工审批 MVP |
 | 收费 | 适合网站订阅/积分 | 桌面难收费 |
 
-**推荐迁移顺序：**
+**后续：**
 
-1. 把 `yi-desktop/src/renderer/src/rules/` 抽成共享包或复制到 `lib/divination/`
-2. 增加 `POST /api/divination/create`（服务端排盘 + 入库，参考 zhaoming 模式）
-3. 增加积分/会员校验 middleware
-4. 国内支付（支付宝）或 Stripe 二选一
+1. 测算记录入库 + 积分/会员校验
+2. 正式 UI 替换工作台 JSON 调试面板
+3. 国内支付（支付宝）或 Stripe
 
 ## 部署（Vercel）
 

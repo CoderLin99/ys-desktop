@@ -5,13 +5,14 @@ import { buildSystemPrompt } from "@/lib/ai/prompts";
 import { getAiModel } from "@/lib/ai/provider";
 import { ensureUserProfile } from "@/lib/data/profiles";
 import { isAiConfigured } from "@/lib/env";
+import { assertAndConsumeAiAccess } from "@/lib/membership/access";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * 通用 AI 流式对话（架构占位：后续可拆分为 /api/ai/divination 等业务路由）。
- * 请求体：{ messages: UIMessage[] }
+ * POST /api/ai/chat
+ * 非会员试用 3 次；有效会员与管理员不限次。
  */
 export async function POST(request: Request) {
   if (!isAiConfigured()) {
@@ -30,6 +31,16 @@ export async function POST(request: Request) {
   }
 
   await ensureUserProfile(session.user.id, session.user.email);
+
+  try {
+    await assertAndConsumeAiAccess(session.user.id);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "无 AI 使用权限";
+    return Response.json(
+      { error: message, code: "AI_TRIAL_EXHAUSTED" },
+      { status: 402 },
+    );
+  }
 
   const body = (await request.json()) as { messages?: UIMessage[] };
   const messages = body.messages ?? [];

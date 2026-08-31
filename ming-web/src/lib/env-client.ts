@@ -12,3 +12,17 @@ export function getAppBaseUrl(): string {
   }
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5555";
 }
+
+/**
+ * 支付宝收款码图片 URL（公开静态资源或图床）。
+ */
+export function getAlipayQrUrl(): string {
+  return process.env.NEXT_PUBLIC_ALIPAY_QR_URL ?? "/pay/alipay-qr.svg";
+}
+
+/**
+ * 微信收款码图片 URL。
+ */
+export function getWechatQrUrl(): string {
+  return process.env.NEXT_PUBLIC_WECHAT_QR_URL ?? "/pay/wechat-qr.svg";
+}

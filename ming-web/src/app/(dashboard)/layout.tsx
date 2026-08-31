@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getSessionUser } from "@/lib/auth/session";
+import { isAdmin } from "@/lib/data/profiles";
 
 /** 工作台依赖会话，禁止静态预渲染 */
 export const dynamic = "force-dynamic";
@@ -19,8 +20,13 @@ export default async function DashboardLayout({
     redirect("/login?redirect=/workspace");
   }
 
+  const admin = await isAdmin(user.id);
+
   return (
-    <DashboardShell userName={user.name || user.email}>
+    <DashboardShell
+      userName={user.name || user.email}
+      isAdmin={admin}
+    >
       {children}
     </DashboardShell>
   );

@@ -8,22 +8,36 @@ import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 /** 侧边栏导航项 */
-const NAV_ITEMS = [
-  { href: "/workspace", label: "工作台" },
-  { href: "/settings", label: "设置" },
-] as const;
+function buildNavItems(isAdmin: boolean) {
+  const items = [
+    { href: "/workspace", label: "工作台" },
+    { href: "/member", label: "会员中心" },
+    { href: "/settings", label: "设置" },
+  ];
+  if (isAdmin) {
+    items.push({ href: "/admin/orders", label: "订单审批" });
+  }
+  return items;
+}
 
 interface DashboardShellProps {
   /** 当前登录用户展示名 */
   userName: string;
+  /** 是否管理员（显示审批入口） */
+  isAdmin?: boolean;
   children: React.ReactNode;
 }
 
 /**
  * 登录后工作台布局：侧栏 + 顶栏 + 内容区（借鉴 zhaoming dashboard 分区）。
  */
-export function DashboardShell({ userName, children }: DashboardShellProps) {
+export function DashboardShell({
+  userName,
+  isAdmin = false,
+  children,
+}: DashboardShellProps) {
   const pathname = usePathname();
+  const navItems = buildNavItems(isAdmin);
 
   /** 登出并回到首页 */
   async function handleSignOut() {
@@ -37,13 +51,13 @@ export function DashboardShell({ userName, children }: DashboardShellProps) {
         <aside className="hidden w-56 shrink-0 border-r bg-background p-4 md:block">
           <div className="mb-6 text-sm font-medium">{userName}</div>
           <nav className="space-y-1">
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
                   "block rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
-                  pathname === item.href && "bg-muted font-medium",
+                  pathname.startsWith(item.href) && "bg-muted font-medium",
                 )}
               >
                 {item.label}

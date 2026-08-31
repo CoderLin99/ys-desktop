@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { ensureAiUsage } from "@/lib/membership/access";
 
 /** 用户业务档案行 */
 export interface ProfileRow {
@@ -25,6 +26,7 @@ export async function ensureUserProfile(
   );
 
   if (existing.rows[0]) {
+    await ensureAiUsage(userId);
     return existing.rows[0];
   }
 
@@ -36,6 +38,7 @@ export async function ensureUserProfile(
     [userId, email.split("@")[0] ?? email],
   );
 
+  await ensureAiUsage(userId);
   return inserted.rows[0]!;
 }
 
