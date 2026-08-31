@@ -1,5 +1,7 @@
 /**
- * 排盘引擎接入点（占位）。
- * 建议：将 ys-desktop 的 rules/* 抽成 @ming/divination 包，在此 re-export。
+ * 服务端排盘引擎入口：禁止被 Client Component 引用。
+ * Next.js 会在误 import 时构建报错（配合 server-only）。
  */
-export const DIVINATION_MODULE_PLACEHOLDER = true;
+import "server-only";
+
+export { buildBaziChart, type BaziChartResult } from "./adapters/bazi";

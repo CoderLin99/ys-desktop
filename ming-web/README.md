@@ -62,6 +62,33 @@ npm run dev
 # http://localhost:5555
 ```
 
+## 服务端八字排盘（已实现）
+
+算法位于 `src/lib/divination/engine/`（**禁止 Client Component import**），经 API 对外：
+
+```http
+POST /api/divination/bazi
+Content-Type: application/json
+Cookie: （Better Auth 会话）
+
+{
+  "year": 1999,
+  "month": 6,
+  "day": 29,
+  "hour": 7,
+  "minute": 20,
+  "dayCutover": "ziZheng"
+}
+```
+
+响应仅含展示字段（四柱、神煞 brief），**不含**查法 `rule` / `basis`，降低逆向价值。
+
+```bash
+npm run test:golden   # 18 项八字+神煞黄金测试
+```
+
+登录后可在 `/workspace` 用「八字排盘（服务端）」面板验证。
+
 ## 与 ys-desktop 的关系
 
 | | **ming-web（本项目）** | **ys-desktop** |

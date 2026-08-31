@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "label": "教学常见归纳表",
+  "note": "与各派口诀可能略异；错了改本目录 JSON 并升版本，勿空口改断语。",
+  "revised": "2026-08-28",
+  "tables": ["wuxing", "strength-weights", "shishen-brief", "tiaohou", "gloss"]
+}
