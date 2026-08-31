@@ -1,0 +1,34 @@
+# 将 ys-desktop 的 ming-web-standalone 分支推送到 CoderLin99/ming-web 的 main
+# 使用前在 ys-desktop 仓库 Settings → Secrets → Actions 添加 MING_WEB_DEPLOY_TOKEN
+# （Fine-grained PAT，对 ming-web 仓库 Contents 读写权限）
+name: Publish to ming-web
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ming-web-standalone
+        uses: actions/checkout@v4
+        with:
+          ref: ming-web-standalone
+          fetch-depth: 0
+
+      - name: Push to ming-web main
+        env:
+          # 跨仓库推送令牌，须对 CoderLin99/ming-web 具备 push 权限
+          MING_WEB_DEPLOY_TOKEN: ${{ secrets.MING_WEB_DEPLOY_TOKEN }}
+        run: |
+          if [ -z "$MING_WEB_DEPLOY_TOKEN" ]; then
+            echo "::error::请在 ys-desktop 仓库添加 Secret：MING_WEB_DEPLOY_TOKEN（对 ming-web 有 push 权限的 PAT）"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add target "https://x-access-token:${MING_WEB_DEPLOY_TOKEN}@github.com/CoderLin99/ming-web.git"
+          git push target HEAD:main --force
