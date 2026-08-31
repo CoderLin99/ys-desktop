@@ -1,7 +1,12 @@
-/**
- * 服务端排盘引擎入口：禁止被 Client Component 引用。
- * Next.js 会在误 import 时构建报错（配合 server-only）。
- */
 import "server-only";
 
 export { buildBaziChart, type BaziChartResult } from "./adapters/bazi";
+export { buildZiWeiChartPublic, type ZiWeiChartResult } from "./adapters/ziwei";
+export { buildLiuYaoChart, type LiuYaoChartResult } from "./adapters/liuyao";
+export {
+  buildHuangliDayPublic,
+  buildHuangliZejiPublic,
+  type HuangliDayResult,
+  type HuangliZejiResult,
+} from "./adapters/huangli";
+export { buildFengShuiChart, type FengShuiChartResult } from "./adapters/fengshui";

@@ -62,6 +62,49 @@ npm run dev
 # http://localhost:5555
 ```
 
+## 服务端排盘 API（已实现）
+
+均需 **登录**（Better Auth Cookie）。算法在 `src/lib/divination/engine/`，**禁止** Client Component import。
+
+| 工具 | 方法 | 路径 |
+|------|------|------|
+| 八字 | POST | `/api/divination/bazi` |
+| 紫微 | POST | `/api/divination/ziwei` |
+| 六爻 | POST | `/api/divination/liuyao` |
+| 黄历日 | POST | `/api/divination/huangli` |
+| 黄历择吉 | POST | `/api/divination/huangli/zeji` |
+| 阳宅风水 | POST | `/api/divination/fengshui` |
+
+响应已脱敏（如八字无 `rule`/`basis`，风水/紫微无 `ragQuery`）。
+
+```bash
+npm run test:golden   # 46 项（八字+神煞+紫微 iztro+六爻+黄历+风水）
+```
+
+登录后 `/workspace` → **服务端排盘工具** 可一键测各 API。
+
+### 请求示例
+
+**紫微：**
+```json
+{ "year": 1990, "month": 5, "day": 1, "hour": 12, "gender": "female" }
+```
+
+**六爻（固定爻）：**
+```json
+{ "mode": "manual", "dayGan": "甲", "values": [8,7,8,7,7,7] }
+```
+
+**黄历择吉：**
+```json
+{ "matterId": "开业", "fromYear": 2026, "fromMonth": 8, "fromDay": 1, "dayCount": 30 }
+```
+
+**风水：**
+```json
+{ "year": 1990, "month": 5, "day": 1, "gender": "male", "headingDeg": 180 }
+```
+
 ## 服务端八字排盘（已实现）
 
 算法位于 `src/lib/divination/engine/`（**禁止 Client Component import**），经 API 对外：

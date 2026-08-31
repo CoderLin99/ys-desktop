@@ -1,5 +1,5 @@
 import { AiChatPanel } from "@/components/ai/ai-chat-panel";
-import { BaziPanel } from "@/components/divination/bazi-panel";
+import { DivinationToolsPanel } from "@/components/divination/divination-tools-panel";
 import {
   Card,
   CardDescription,
@@ -29,7 +29,7 @@ export default function WorkspacePage() {
         </CardHeader>
       </Card>
 
-      <BaziPanel />
+      <DivinationToolsPanel />
 
       <AiChatPanel />
     </div>

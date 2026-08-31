@@ -1,7 +1,7 @@
 import "server-only";
 
-import { buildBaziChart } from "@/lib/divination/adapters/bazi";
-import { baziInputSchema } from "@/lib/divination/schemas/bazi";
+import { buildFengShuiChart } from "@/lib/divination/adapters/fengshui";
+import { fengshuiInputSchema } from "@/lib/divination/schemas/fengshui";
 import {
   parseJsonBody,
   requireApiSession,
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * POST /api/divination/bazi — 服务端八字排盘。
+ * POST /api/divination/fengshui — 服务端阳宅风水推算。
  */
 export async function POST(request: Request) {
   if (!(await requireApiSession())) return unauthorizedResponse();
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "无效 JSON" }, { status: 400 });
   }
 
-  const parsed = baziInputSchema.safeParse(body);
+  const parsed = fengshuiInputSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json(
       { error: parsed.error.issues[0]?.message ?? "参数无效" },
@@ -31,14 +31,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const chart = buildBaziChart(parsed.data);
+    const chart = buildFengShuiChart(parsed.data);
     return Response.json({
-      divinationType: "bazi",
+      divinationType: "fengshui",
       chart,
       computedAt: new Date().toISOString(),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "排盘失败";
+    const message = err instanceof Error ? err.message : "风水推算失败";
     return Response.json({ error: message }, { status: 500 });
   }
 }

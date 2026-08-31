@@ -9,7 +9,7 @@
     "lint": "eslint",
     "auth:migrate": "npx @better-auth/cli migrate",
     "test": "vitest run --config vitest.config.mts",
-    "test:golden": "vitest run --config vitest.config.mts src/lib/divination/bazi.golden.test.ts"
+    "test:golden": "vitest run --config vitest.config.mts src/lib/divination/all.golden.test.ts"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.41",
@@ -40,6 +40,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
+    "iztro": "^2.6.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.11"

@@ -8,6 +8,9 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["src/lib/divination/bazi.golden.test.ts"],
+    include: [
+      "src/lib/divination/all.golden.test.ts",
+      "src/lib/divination/bazi.golden.test.ts",
+    ],
   },
 });
