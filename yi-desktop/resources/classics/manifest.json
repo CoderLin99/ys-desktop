@@ -1,0 +1,171 @@
+[
+  {
+    "id": "bazitiyao",
+    "title": "八字提要",
+    "source": "local:mingli-research/books/八字提要",
+    "provider": "local-mingli",
+    "chunks": 259,
+    "chars": 130193
+  },
+  {
+    "id": "ditian",
+    "title": "滴天髓阐微",
+    "source": "local:mingli-research/books/滴天髓阐微",
+    "provider": "local-mingli",
+    "chunks": 254,
+    "chars": 140367
+  },
+  {
+    "id": "guaguaji",
+    "title": "呱呱集",
+    "source": "local:mingli-research/books/呱呱集",
+    "provider": "local-mingli",
+    "chunks": 142,
+    "chars": 82013
+  },
+  {
+    "id": "guiguyiwen",
+    "title": "鬼谷遗文",
+    "source": "local:mingli-research/books/鬼谷遗文",
+    "provider": "local-mingli",
+    "chunks": 32,
+    "chars": 11164
+  },
+  {
+    "id": "lantai",
+    "title": "兰台妙选",
+    "source": "local:mingli-research/books/兰台妙选",
+    "provider": "local-mingli",
+    "chunks": 32,
+    "chars": 19111
+  },
+  {
+    "id": "lixuzhong",
+    "title": "李虚中命书",
+    "source": "local:mingli-research/books/李虚中命书",
+    "provider": "local-mingli",
+    "chunks": 58,
+    "chars": 25766
+  },
+  {
+    "id": "minglitanyuan",
+    "title": "命理探原",
+    "source": "local:mingli-research/books/命理探原",
+    "provider": "local-mingli",
+    "chunks": 59,
+    "chars": 56226
+  },
+  {
+    "id": "mingliyueyan",
+    "title": "命理约言",
+    "source": "local:mingli-research/books/命理约言",
+    "provider": "local-mingli",
+    "chunks": 134,
+    "chars": 55237
+  },
+  {
+    "id": "qianli",
+    "title": "千里命稿",
+    "source": "local:mingli-research/books/千里命稿",
+    "provider": "local-mingli",
+    "chunks": 186,
+    "chars": 102333
+  },
+  {
+    "id": "qiongtong",
+    "title": "穷通宝鉴",
+    "source": "local:mingli-research/books/穷通宝鉴",
+    "provider": "local-mingli",
+    "chunks": 377,
+    "chars": 191811
+  },
+  {
+    "id": "santong",
+    "title": "三命通会",
+    "source": "local:mingli-research/books/三命通会",
+    "provider": "local-mingli",
+    "chunks": 631,
+    "chars": 306917
+  },
+  {
+    "id": "shenfeng",
+    "title": "神峰通考",
+    "source": "local:mingli-research/books/神峰通考",
+    "provider": "local-mingli",
+    "chunks": 232,
+    "chars": 149956
+  },
+  {
+    "id": "wenzhen-shenshadaquan",
+    "title": "神煞大全",
+    "source": "local:wenzhen-html/3_1_0",
+    "provider": "wenzhen-html",
+    "chunks": 63,
+    "chars": 21660,
+    "wenzhenBookId": "3_1_0"
+  },
+  {
+    "id": "wuxingdayi",
+    "title": "五行大义",
+    "source": "local:mingli-research/books/五行大义",
+    "provider": "local-mingli",
+    "chunks": 178,
+    "chars": 81774
+  },
+  {
+    "id": "wuxingjingji",
+    "title": "五行精纪",
+    "source": "local:mingli-research/books/五行精纪",
+    "provider": "local-mingli",
+    "chunks": 169,
+    "chars": 110158
+  },
+  {
+    "id": "yuzhaodingzhen",
+    "title": "玉照定真经",
+    "source": "local:mingli-research/books/玉照定真经",
+    "provider": "local-mingli",
+    "chunks": 18,
+    "chars": 2962
+  },
+  {
+    "id": "yuanhai",
+    "title": "渊海子平",
+    "source": "local:mingli-research/books/渊海子平",
+    "provider": "local-mingli",
+    "chunks": 499,
+    "chars": 234666
+  },
+  {
+    "id": "zaohuayuanyao",
+    "title": "造化元钥评注",
+    "source": "local:mingli-research/books/造化元钥评注",
+    "provider": "local-mingli",
+    "chunks": 32,
+    "chars": 14788
+  },
+  {
+    "id": "zipingguanjian",
+    "title": "子平管见",
+    "source": "local:mingli-research/books/子平管见",
+    "provider": "local-mingli",
+    "chunks": 68,
+    "chars": 24965
+  },
+  {
+    "id": "zhenquan",
+    "title": "子平真诠",
+    "source": "local:mingli-research/books/子平真诠",
+    "provider": "local-mingli",
+    "chunks": 65,
+    "chars": 104205
+  },
+  {
+    "id": "ziwei-quanshu",
+    "title": "紫微斗数全书",
+    "source": "local:mingli-research/books/紫微斗数全书",
+    "provider": "local-mingli",
+    "chunks": 147,
+    "chars": 76431
+  }
+]
